@@ -1,11 +1,12 @@
 {
   "expo": {
-    "name": "PlannerAppTemp",
-    "slug": "PlannerAppTemp",
+    "name": "PlannerApp",
+    "slug": "PlannerApp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "scheme": "weekfill",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -13,7 +14,19 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.junyutoh.weekfill",
+      "infoPlist": {
+        "NSCalendarsUsageDescription": "WeekFill needs calendar access to export your scheduled time blocks.",
+        "NSSupportsLiveActivities": true,
+        "NSSupportsLiveActivitiesFrequentUpdates": true,
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "entitlements": {
+        "com.apple.security.application-groups": [
+          "group.com.junyutoh.weekfill"
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -21,10 +34,51 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.junyutoh.weekfill",
+      "permissions": [
+        "android.permission.READ_CALENDAR",
+        "android.permission.WRITE_CALENDAR"
+      ]
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-calendar",
+      [
+        "react-native-widget-extension",
+        {
+          "widgetsFolder": "widgets",
+          "frequentUpdates": true,
+          "groupIdentifier": "group.com.junyutoh.weekfill"
+        }
+      ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "build": {
+          "experimental": {
+            "ios": {
+              "appExtensions": [
+                {
+                  "targetName": "widgets",
+                  "bundleIdentifier": "com.junyutoh.weekfill.widgets",
+                  "entitlements": {
+                    "com.apple.security.application-groups": [
+                      "group.com.junyutoh.weekfill"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "projectId": "42c89b4b-458f-452d-a744-a3588da69222"
+      }
     }
   }
 }
