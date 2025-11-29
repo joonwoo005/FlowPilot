@@ -65,7 +65,7 @@
             "ios": {
               "appExtensions": [
                 {
-                  "targetName": "widgets",
+                  "targetName": "PlannerAppWidgetExtension",
                   "bundleIdentifier": "com.junyutoh.weekfill.widgets",
                   "entitlements": {
                     "com.apple.security.application-groups": [
