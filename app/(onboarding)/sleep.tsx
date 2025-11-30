@@ -1,11 +1,14 @@
 import { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Modal } from "react-native";
+import { View, Text, Pressable, StyleSheet, Modal } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useAuthStore, useUserStore } from "@/stores";
 import { userRepository } from "@/services/repositories";
 import { calculateAwakeHours } from "@/utils";
+import { GradientBackground, GlassCard } from "@/components/ui";
+import { colors, typography, spacing, borderRadius } from "@/theme";
 
 const timeStringToDate = (timeStr: string): Date => {
   const [hours, minutes] = timeStr.split(":").map(Number);
@@ -19,6 +22,13 @@ const dateToTimeString = (date: Date): string => {
     .getMinutes()
     .toString()
     .padStart(2, "0")}`;
+};
+
+const formatTime12Hour = (time: string): string => {
+  const [hours, minutes] = time.split(":").map(Number);
+  const period = hours >= 12 ? "PM" : "AM";
+  const hour12 = hours % 12 || 12;
+  return `${hour12}:${minutes.toString().padStart(2, "0")} ${period}`;
 };
 
 export default function SleepScreen() {
@@ -42,6 +52,7 @@ export default function SleepScreen() {
   }, [profile?.sleepTime, profile?.wakeTime]);
 
   const awakeHoursPerDay = calculateAwakeHours(sleepTime, wakeTime);
+  const sleepHours = 24 - awakeHoursPerDay;
   const weeklyAwakeHours = awakeHoursPerDay * 7;
 
   const handleSleepChange = (_: any, selectedDate?: Date) => {
@@ -100,169 +111,305 @@ export default function SleepScreen() {
     router.push("/(onboarding)/allocate");
   };
 
+  const handleBack = () => {
+    router.back();
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>Sleep Schedule</Text>
-        <Text style={styles.subtitle}>
-          When do you typically sleep and wake up?
-        </Text>
-
-        <View style={styles.section}>
-          <Text style={styles.label}>Bedtime</Text>
-          <TouchableOpacity
-            style={styles.timeButton}
-            onPress={openSleepPicker}
-          >
-            <Text style={styles.timeText}>{sleepTime}</Text>
-          </TouchableOpacity>
+    <GradientBackground>
+      <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+        {/* Header with Back Button */}
+        <View style={styles.header}>
+          <Pressable onPress={handleBack} style={styles.backButton}>
+            <Ionicons name="chevron-back" size={24} color={colors.text.secondary} />
+          </Pressable>
+          <View style={styles.stepIndicator}>
+            <View style={styles.stepDots}>
+              <View style={styles.dotCompleted} />
+              <View style={styles.dotCompleted} />
+              <View style={[styles.dot, styles.dotActive]} />
+              <View style={styles.dot} />
+            </View>
+            <Text style={styles.stepText}>Step 3 of 4</Text>
+          </View>
+          <View style={styles.headerSpacer} />
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.label}>Wake Time</Text>
-          <TouchableOpacity
-            style={styles.timeButton}
-            onPress={openWakePicker}
+        <View style={styles.content}>
+          {/* Icon Header */}
+          <View style={styles.iconContainer}>
+            <View style={styles.iconGlow} />
+            <View style={styles.iconCircle}>
+              <Ionicons name="moon" size={32} color="#818CF8" />
+            </View>
+          </View>
+
+          <Text style={styles.title}>Sleep Schedule</Text>
+          <Text style={styles.subtitle}>
+            When do you typically go to bed{"\n"}and wake up?
+          </Text>
+
+          {/* Time Selectors */}
+          <View style={styles.timeSection}>
+            <Pressable onPress={openSleepPicker}>
+              <GlassCard style={styles.timeCard}>
+                <View style={styles.timeIconContainer}>
+                  <Ionicons name="bed-outline" size={22} color={colors.primary.purple} />
+                </View>
+                <View style={styles.timeInfo}>
+                  <Text style={styles.timeLabel}>Bedtime</Text>
+                  <Text style={styles.timeValue}>{formatTime12Hour(sleepTime)}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
+              </GlassCard>
+            </Pressable>
+
+            <Pressable onPress={openWakePicker}>
+              <GlassCard style={styles.timeCard}>
+                <View style={[styles.timeIconContainer, styles.wakeIconContainer]}>
+                  <Ionicons name="sunny-outline" size={22} color={colors.status.warning} />
+                </View>
+                <View style={styles.timeInfo}>
+                  <Text style={styles.timeLabel}>Wake Time</Text>
+                  <Text style={styles.timeValue}>{formatTime12Hour(wakeTime)}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
+              </GlassCard>
+            </Pressable>
+          </View>
+
+          {/* Summary Stats */}
+          <GlassCard style={styles.summaryCard}>
+            <View style={styles.summaryRow}>
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryValue}>{awakeHoursPerDay}</Text>
+                <Text style={styles.summaryLabel}>Awake hours</Text>
+              </View>
+              <View style={styles.summaryDivider} />
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryValue}>{sleepHours}</Text>
+                <Text style={styles.summaryLabel}>Sleep hours</Text>
+              </View>
+            </View>
+            <View style={styles.weeklyRow}>
+              <Ionicons name="calendar-outline" size={14} color={colors.primary.blue} />
+              <Text style={styles.weeklyText}>
+                {weeklyAwakeHours} hours available per week
+              </Text>
+            </View>
+          </GlassCard>
+
+          <View style={styles.spacer} />
+
+          {/* Continue Button */}
+          <Pressable
+            style={({ pressed }) => [
+              styles.button,
+              pressed && styles.buttonPressed,
+            ]}
+            onPress={handleContinue}
           >
-            <Text style={styles.timeText}>{wakeTime}</Text>
-          </TouchableOpacity>
+            <Text style={styles.buttonText}>Continue</Text>
+            <Ionicons name="arrow-forward" size={20} color="#fff" />
+          </Pressable>
         </View>
 
+        {/* Sleep Time Picker Modal */}
         <Modal
           visible={showSleepPicker}
           transparent
           animationType="slide"
         >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
+          <Pressable style={styles.modalOverlay} onPress={() => setShowSleepPicker(false)}>
+            <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
               <View style={styles.modalHeader}>
-                <TouchableOpacity onPress={() => setShowSleepPicker(false)}>
+                <Pressable onPress={() => setShowSleepPicker(false)}>
                   <Text style={styles.modalCancel}>Cancel</Text>
-                </TouchableOpacity>
+                </Pressable>
                 <Text style={styles.modalTitle}>Bedtime</Text>
-                <TouchableOpacity onPress={confirmSleepTime}>
+                <Pressable onPress={confirmSleepTime}>
                   <Text style={styles.modalDone}>Done</Text>
-                </TouchableOpacity>
+                </Pressable>
               </View>
               <DateTimePicker
                 value={timeStringToDate(tempSleepTime)}
                 mode="time"
-                is24Hour={true}
+                is24Hour={false}
                 display="spinner"
                 onChange={handleSleepChange}
-                themeVariant="light"
+                themeVariant="dark"
+                textColor={colors.text.primary}
               />
-            </View>
-          </View>
+            </Pressable>
+          </Pressable>
         </Modal>
 
+        {/* Wake Time Picker Modal */}
         <Modal
           visible={showWakePicker}
           transparent
           animationType="slide"
         >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
+          <Pressable style={styles.modalOverlay} onPress={() => setShowWakePicker(false)}>
+            <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
               <View style={styles.modalHeader}>
-                <TouchableOpacity onPress={() => setShowWakePicker(false)}>
+                <Pressable onPress={() => setShowWakePicker(false)}>
                   <Text style={styles.modalCancel}>Cancel</Text>
-                </TouchableOpacity>
+                </Pressable>
                 <Text style={styles.modalTitle}>Wake Time</Text>
-                <TouchableOpacity onPress={confirmWakeTime}>
+                <Pressable onPress={confirmWakeTime}>
                   <Text style={styles.modalDone}>Done</Text>
-                </TouchableOpacity>
+                </Pressable>
               </View>
               <DateTimePicker
                 value={timeStringToDate(tempWakeTime)}
                 mode="time"
-                is24Hour={true}
+                is24Hour={false}
                 display="spinner"
                 onChange={handleWakeChange}
-                themeVariant="light"
+                themeVariant="dark"
+                textColor={colors.text.primary}
               />
-            </View>
-          </View>
+            </Pressable>
+          </Pressable>
         </Modal>
-
-        <View style={styles.summaryBox}>
-          <View style={styles.summaryRow}>
-            <View style={styles.summaryItem}>
-              <Text style={styles.summaryValue}>{awakeHoursPerDay}</Text>
-              <Text style={styles.summaryLabel}>awake hours</Text>
-            </View>
-            <View style={styles.summaryDivider} />
-            <View style={styles.summaryItem}>
-              <Text style={styles.summaryValue}>{24 - awakeHoursPerDay}</Text>
-              <Text style={styles.summaryLabel}>sleep hours</Text>
-            </View>
-          </View>
-          <Text style={styles.summarySubtext}>
-            Weekly awake: {weeklyAwakeHours} hours
-          </Text>
-        </View>
-
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleContinue}
-        >
-          <Text style={styles.buttonText}>Continue</Text>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </GradientBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.sm,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.surface.secondary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stepIndicator: {
+    flex: 1,
+    alignItems: "center",
+  },
+  stepDots: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.surface.border,
+  },
+  dotActive: {
+    backgroundColor: colors.primary.blue,
+    width: 24,
+  },
+  dotCompleted: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.status.success,
+  },
+  stepText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.text.muted,
+  },
+  headerSpacer: {
+    width: 40,
   },
   content: {
     flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 48,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
+  },
+  iconContainer: {
+    alignItems: "center",
+    marginBottom: spacing.xl,
+  },
+  iconGlow: {
+    position: "absolute",
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: "#818CF8",
+    opacity: 0.15,
+  },
+  iconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: colors.surface.elevated,
+    borderWidth: 1,
+    borderColor: colors.surface.border,
+    alignItems: "center",
+    justifyContent: "center",
   },
   title: {
-    fontSize: 30,
-    fontWeight: "bold",
-    color: "#111827",
-    marginBottom: 8,
+    fontSize: typography.fontSize["2xl"],
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.primary,
+    textAlign: "center",
+    marginBottom: spacing.sm,
   },
   subtitle: {
-    fontSize: 18,
-    color: "#4b5563",
-    marginBottom: 32,
+    fontSize: typography.fontSize.base,
+    color: colors.text.secondary,
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: spacing.xl,
   },
-  section: {
-    marginBottom: 24,
+  timeSection: {
+    gap: spacing.md,
+    marginBottom: spacing.xl,
   },
-  label: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#374151",
-    marginBottom: 8,
+  timeCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: spacing.base,
   },
-  timeButton: {
-    borderWidth: 1,
-    borderColor: "#d1d5db",
+  timeIconContainer: {
+    width: 44,
+    height: 44,
     borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    backgroundColor: "rgba(139, 92, 246, 0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: spacing.md,
   },
-  timeText: {
-    fontSize: 18,
-    color: "#111827",
+  wakeIconContainer: {
+    backgroundColor: "rgba(245, 158, 11, 0.15)",
   },
-  summaryBox: {
-    backgroundColor: "#eff6ff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 32,
+  timeInfo: {
+    flex: 1,
+  },
+  timeLabel: {
+    fontSize: typography.fontSize.sm,
+    color: colors.text.muted,
+    marginBottom: 2,
+  },
+  timeValue: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.text.primary,
+  },
+  summaryCard: {
+    padding: spacing.lg,
   },
   summaryRow: {
     flexDirection: "row",
-    justifyContent: "center",
     alignItems: "center",
+    marginBottom: spacing.base,
   },
   summaryItem: {
     flex: 1,
@@ -271,71 +418,87 @@ const styles = StyleSheet.create({
   summaryDivider: {
     width: 1,
     height: 40,
-    backgroundColor: "#bfdbfe",
-  },
-  summaryLabel: {
-    fontSize: 14,
-    color: "#1e40af",
-    marginTop: 4,
+    backgroundColor: colors.surface.border,
   },
   summaryValue: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#1e3a8a",
+    fontSize: typography.fontSize["2xl"],
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.primary,
   },
-  summarySubtext: {
-    fontSize: 14,
-    color: "#2563eb",
-    marginTop: 12,
-    textAlign: "center",
+  summaryLabel: {
+    fontSize: typography.fontSize.sm,
+    color: colors.text.muted,
+    marginTop: 2,
+  },
+  weeklyRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.xs,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.surface.border,
+  },
+  weeklyText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.primary.blue,
+    fontWeight: typography.fontWeight.medium,
+  },
+  spacer: {
+    flex: 1,
   },
   button: {
-    backgroundColor: "#2563eb",
-    borderRadius: 12,
-    paddingVertical: 16,
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.primary.blue,
+    borderRadius: borderRadius.xl,
+    paddingVertical: spacing.lg,
+    gap: spacing.sm,
+    marginBottom: spacing.xl,
   },
-  buttonDisabled: {
-    backgroundColor: "#d1d5db",
+  buttonPressed: {
+    opacity: 0.9,
+    transform: [{ scale: 0.98 }],
   },
   buttonText: {
     color: "#fff",
-    fontWeight: "600",
-    fontSize: 18,
+    fontWeight: typography.fontWeight.semibold,
+    fontSize: typography.fontSize.md,
   },
   modalOverlay: {
     flex: 1,
     justifyContent: "flex-end",
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
   },
   modalContent: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingBottom: 40,
-    alignItems: "center",
+    backgroundColor: colors.background.start,
+    borderTopLeftRadius: borderRadius["2xl"],
+    borderTopRightRadius: borderRadius["2xl"],
+    paddingBottom: spacing["3xl"],
   },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 16,
+    padding: spacing.base,
     borderBottomWidth: 1,
-    borderBottomColor: "#e5e7eb",
-    width: "100%",
+    borderBottomColor: colors.surface.border,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#111827",
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.text.primary,
   },
   modalCancel: {
-    fontSize: 16,
-    color: "#6b7280",
+    fontSize: typography.fontSize.base,
+    color: colors.text.secondary,
+    paddingHorizontal: spacing.sm,
   },
   modalDone: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#2563eb",
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.primary.blue,
+    paddingHorizontal: spacing.sm,
   },
 });

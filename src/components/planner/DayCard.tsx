@@ -1,8 +1,9 @@
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { DaySchedule } from "@/types";
 import { TimeBlockItem } from "./TimeBlockItem";
 import { formatDateShort, formatHoursAndMinutes } from "@/utils";
+import { colors, typography, spacing, borderRadius } from "@/theme";
 
 interface DayCardProps {
   day: DaySchedule;
@@ -19,12 +20,12 @@ export function DayCard({ day, onAddBlock, onDeleteBlock, showAddButton = true }
           <Text style={styles.dayName}>{formatDateShort(day.date)} - {day.dayName}</Text>
         </View>
         {showAddButton && (
-          <TouchableOpacity
+          <Pressable
             onPress={() => onAddBlock(day.dayOfWeek)}
             style={styles.addButton}
           >
-            <Ionicons name="add-circle-outline" size={28} color="#2563eb" />
-          </TouchableOpacity>
+            <Ionicons name="add-circle" size={28} color={colors.primary.blue} />
+          </Pressable>
         )}
       </View>
 
@@ -55,42 +56,44 @@ export function DayCard({ day, onAddBlock, onDeleteBlock, showAddButton = true }
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#f9fafb",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    backgroundColor: colors.surface.primary,
+    borderRadius: borderRadius.xl,
+    borderWidth: 1,
+    borderColor: colors.surface.border,
+    padding: spacing.base,
+    marginBottom: spacing.md,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   dayName: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#111827",
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.text.primary,
   },
   addButton: {
-    padding: 4,
+    padding: spacing.xs,
   },
   emptyState: {
-    paddingVertical: 16,
+    paddingVertical: spacing.base,
     alignItems: "center",
   },
   emptyText: {
-    color: "#9ca3af",
-    fontSize: 14,
+    color: colors.text.muted,
+    fontSize: typography.fontSize.sm,
   },
   footer: {
-    marginTop: 8,
-    paddingTop: 8,
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: "#e5e7eb",
+    borderTopColor: colors.surface.border,
   },
   totalText: {
-    fontSize: 14,
-    color: "#6b7280",
+    fontSize: typography.fontSize.sm,
+    color: colors.text.secondary,
     textAlign: "right",
   },
 });

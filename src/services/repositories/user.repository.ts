@@ -65,6 +65,13 @@ class UserRepository {
   async completeOnboarding(userId: string): Promise<void> {
     await this.update(userId, { onboardingComplete: true });
   }
+
+  async updateCalendarSyncEnabled(
+    userId: string,
+    enabled: boolean
+  ): Promise<void> {
+    await this.update(userId, { calendarSyncEnabled: enabled });
+  }
 }
 
 export const userRepository = new UserRepository();

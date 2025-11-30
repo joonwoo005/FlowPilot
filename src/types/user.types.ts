@@ -7,6 +7,7 @@ export interface User {
   wakeTime: string; // "06:00" format
   awakeHoursPerDay: number;
   onboardingComplete: boolean;
+  calendarSyncEnabled?: boolean; // Auto-sync to Apple Calendar
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }

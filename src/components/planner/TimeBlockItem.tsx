@@ -1,6 +1,8 @@
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { TimeBlockWithPriority } from "@/types";
 import { calculateEndTime, formatMinutesToHours } from "@/utils";
+import { colors, typography, spacing, borderRadius } from "@/theme";
 
 interface TimeBlockItemProps {
   block: TimeBlockWithPriority;
@@ -9,11 +11,12 @@ interface TimeBlockItemProps {
 
 export function TimeBlockItem({ block, onDelete }: TimeBlockItemProps) {
   const endTime = calculateEndTime(block.startTime, block.durationMinutes);
+  const priorityColor = block.priority?.color || colors.text.muted;
 
   return (
     <View style={styles.container}>
       <View
-        style={[styles.colorBar, { backgroundColor: block.priority?.color || "#ccc" }]}
+        style={[styles.colorBar, { backgroundColor: priorityColor }]}
       />
       <View style={styles.content}>
         <Text style={styles.name}>{block.priorityName}</Text>
@@ -22,9 +25,9 @@ export function TimeBlockItem({ block, onDelete }: TimeBlockItemProps) {
         </Text>
       </View>
       {onDelete && (
-        <TouchableOpacity onPress={() => onDelete(block.id)} style={styles.deleteButton}>
-          <Text style={styles.deleteText}>×</Text>
-        </TouchableOpacity>
+        <Pressable onPress={() => onDelete(block.id)} style={styles.deleteButton}>
+          <Ionicons name="close-circle" size={22} color={colors.status.error} />
+        </Pressable>
       )}
     </View>
   );
@@ -34,40 +37,34 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    backgroundColor: colors.surface.elevated,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.surface.border,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
   },
   colorBar: {
     width: 4,
     height: "100%",
     borderRadius: 2,
-    marginRight: 12,
+    marginRight: spacing.md,
     minHeight: 40,
   },
   content: {
     flex: 1,
   },
   name: {
-    fontWeight: "500",
-    color: "#111827",
+    fontWeight: typography.fontWeight.medium,
+    color: colors.text.primary,
+    fontSize: typography.fontSize.base,
   },
   time: {
-    fontSize: 14,
-    color: "#6b7280",
+    fontSize: typography.fontSize.sm,
+    color: colors.text.secondary,
     marginTop: 2,
   },
   deleteButton: {
-    padding: 8,
-  },
-  deleteText: {
-    color: "#ef4444",
-    fontSize: 20,
+    padding: spacing.xs,
   },
 });

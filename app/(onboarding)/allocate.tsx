@@ -2,18 +2,21 @@ import { useState, useEffect } from "react";
 import {
   View,
   Text,
-  TouchableOpacity,
+  Pressable,
   FlatList,
   TextInput,
   StyleSheet,
   KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { useAuthStore, useUserStore } from "@/stores";
 import { priorityRepository, userRepository } from "@/services/repositories";
 import { Priority } from "@/types";
-import { KeyboardDoneBar } from "@/components/ui";
+import { GradientBackground, GlassCard, KeyboardDoneBar } from "@/components/ui";
+import { colors, typography, spacing, borderRadius } from "@/theme";
 
 const INPUT_ACCESSORY_ID = "allocateHoursInput";
 
@@ -49,6 +52,7 @@ export default function AllocateScreen() {
     0
   );
   const remainingHours = weeklyAwakeHours - totalAllocated;
+  const progressPercent = Math.min((totalAllocated / weeklyAwakeHours) * 100, 100);
 
   const handleHoursChange = async (id: string, hours: string) => {
     const numHours = Math.max(0, parseInt(hours) || 0);
@@ -82,202 +86,400 @@ export default function AllocateScreen() {
     }
   };
 
+  const handleBack = () => {
+    router.back();
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView behavior="padding" style={styles.flex}>
-        <View style={styles.content}>
-        <Text style={styles.title}>Allocate Hours</Text>
-        <Text style={styles.subtitle}>
-          How many hours per week for each priority?
-        </Text>
+    <GradientBackground>
+      <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.flex}
+        >
+          {/* Header with Back Button */}
+          <View style={styles.header}>
+            <Pressable onPress={handleBack} style={styles.backButton}>
+              <Ionicons name="chevron-back" size={24} color={colors.text.secondary} />
+            </Pressable>
+            <View style={styles.stepIndicator}>
+              <View style={styles.stepDots}>
+                <View style={styles.dotCompleted} />
+                <View style={styles.dotCompleted} />
+                <View style={styles.dotCompleted} />
+                <View style={[styles.dot, styles.dotActive]} />
+              </View>
+              <Text style={styles.stepText}>Step 4 of 4</Text>
+            </View>
+            <View style={styles.headerSpacer} />
+          </View>
 
-        <View style={styles.summaryBox}>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Total weekly hours:</Text>
-            <Text style={styles.summaryValue}>{weeklyAwakeHours}h</Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Allocated:</Text>
-            <Text style={styles.summaryValue}>{totalAllocated}h</Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Remaining:</Text>
-            <Text
-              style={[
-                styles.summaryValue,
-                remainingHours < 0 ? styles.textRed : styles.textGreen,
-              ]}
-            >
-              {remainingHours}h
-            </Text>
-          </View>
-        </View>
-
-        <FlatList
-          data={priorities}
-          keyExtractor={(item) => item.id}
-          style={styles.list}
-          renderItem={({ item }) => (
-            <View style={styles.priorityItem}>
-              <View
-                style={[styles.colorDot, { backgroundColor: item.color }]}
-              />
-              <Text style={styles.priorityName}>{item.name}</Text>
-              <View style={styles.hoursInput}>
-                <TextInput
-                  style={styles.input}
-                  keyboardType="number-pad"
-                  value={item.allocatedHours.toString()}
-                  onChangeText={(text) => handleHoursChange(item.id, text)}
-                  inputAccessoryViewID={INPUT_ACCESSORY_ID}
-                  placeholder="0"
-                  placeholderTextColor="#9ca3af"
-                />
-                <Text style={styles.hoursLabel}>h/week</Text>
+          <View style={styles.content}>
+            {/* Icon Header */}
+            <View style={styles.iconContainer}>
+              <View style={styles.iconGlow} />
+              <View style={styles.iconCircle}>
+                <Ionicons name="time" size={32} color={colors.status.success} />
               </View>
             </View>
-          )}
-        />
 
-        {remainingHours < 0 && (
-          <View style={styles.warningBox}>
-            <Text style={styles.warningText}>
-              You've allocated more hours than available!
+            <Text style={styles.title}>Allocate Hours</Text>
+            <Text style={styles.subtitle}>
+              How many hours per week do you want{"\n"}to dedicate to each priority?
             </Text>
-          </View>
-        )}
 
-        <TouchableOpacity
-          style={[
-            styles.button,
-            (remainingHours < 0 || isLoading) && styles.buttonDisabled,
-          ]}
-          onPress={handleComplete}
-          disabled={remainingHours < 0 || isLoading}
-        >
-          <Text style={styles.buttonText}>
-            {isLoading ? "Setting up..." : "Complete Setup"}
-          </Text>
-        </TouchableOpacity>
-      </View>
-      </KeyboardAvoidingView>
-      <KeyboardDoneBar inputAccessoryViewID={INPUT_ACCESSORY_ID} />
-    </SafeAreaView>
+            {/* Summary Card */}
+            <GlassCard style={styles.summaryCard}>
+              <View style={styles.summaryHeader}>
+                <View>
+                  <Text style={styles.summaryLabel}>Weekly Budget</Text>
+                  <Text style={styles.summaryTotal}>{weeklyAwakeHours}h available</Text>
+                </View>
+                <View style={styles.remainingBadge}>
+                  <Text style={[
+                    styles.remainingValue,
+                    remainingHours < 0 && styles.remainingNegative,
+                    remainingHours === 0 && styles.remainingZero,
+                  ]}>
+                    {remainingHours}h
+                  </Text>
+                  <Text style={styles.remainingLabel}>remaining</Text>
+                </View>
+              </View>
+
+              {/* Progress Bar */}
+              <View style={styles.progressContainer}>
+                <View style={styles.progressTrack}>
+                  <View
+                    style={[
+                      styles.progressFill,
+                      { width: `${progressPercent}%` },
+                      remainingHours < 0 && styles.progressOverflow,
+                    ]}
+                  />
+                </View>
+                <Text style={styles.progressText}>
+                  {totalAllocated}h allocated
+                </Text>
+              </View>
+            </GlassCard>
+
+            {/* Priority List */}
+            <FlatList
+              data={priorities}
+              keyExtractor={(item) => item.id}
+              style={styles.list}
+              contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={false}
+              renderItem={({ item }) => (
+                <GlassCard style={styles.priorityItem}>
+                  <View style={[styles.colorDot, { backgroundColor: item.color }]} />
+                  <Text style={styles.priorityName}>{item.name}</Text>
+                  <View style={styles.hoursInputContainer}>
+                    <TextInput
+                      style={styles.hoursInput}
+                      keyboardType="number-pad"
+                      value={item.allocatedHours.toString()}
+                      onChangeText={(text) => handleHoursChange(item.id, text)}
+                      inputAccessoryViewID={INPUT_ACCESSORY_ID}
+                      placeholder="0"
+                      placeholderTextColor={colors.text.muted}
+                      selectTextOnFocus
+                    />
+                    <Text style={styles.hoursLabel}>h/wk</Text>
+                  </View>
+                </GlassCard>
+              )}
+            />
+
+            {/* Warning if over budget */}
+            {remainingHours < 0 && (
+              <View style={styles.warningBanner}>
+                <Ionicons name="warning" size={18} color={colors.status.error} />
+                <Text style={styles.warningText}>
+                  You've allocated {Math.abs(remainingHours)}h more than available
+                </Text>
+              </View>
+            )}
+
+            {/* Complete Button */}
+            <Pressable
+              style={({ pressed }) => [
+                styles.button,
+                (remainingHours < 0 || isLoading) && styles.buttonDisabled,
+                pressed && remainingHours >= 0 && !isLoading && styles.buttonPressed,
+              ]}
+              onPress={handleComplete}
+              disabled={remainingHours < 0 || isLoading}
+            >
+              {isLoading ? (
+                <Text style={styles.buttonText}>Setting up...</Text>
+              ) : (
+                <>
+                  <Text style={[
+                    styles.buttonText,
+                    (remainingHours < 0) && styles.buttonTextDisabled,
+                  ]}>
+                    Complete Setup
+                  </Text>
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={20}
+                    color={remainingHours >= 0 ? "#fff" : colors.text.muted}
+                  />
+                </>
+              )}
+            </Pressable>
+          </View>
+        </KeyboardAvoidingView>
+        <KeyboardDoneBar inputAccessoryViewID={INPUT_ACCESSORY_ID} />
+      </SafeAreaView>
+    </GradientBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
   },
   flex: {
     flex: 1,
   },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.sm,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.surface.secondary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stepIndicator: {
+    flex: 1,
+    alignItems: "center",
+  },
+  stepDots: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.surface.border,
+  },
+  dotActive: {
+    backgroundColor: colors.primary.blue,
+    width: 24,
+  },
+  dotCompleted: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.status.success,
+  },
+  stepText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.text.muted,
+  },
+  headerSpacer: {
+    width: 40,
+  },
   content: {
     flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 48,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
+  },
+  iconContainer: {
+    alignItems: "center",
+    marginBottom: spacing.lg,
+  },
+  iconGlow: {
+    position: "absolute",
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: colors.status.success,
+    opacity: 0.15,
+  },
+  iconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: colors.surface.elevated,
+    borderWidth: 1,
+    borderColor: colors.surface.border,
+    alignItems: "center",
+    justifyContent: "center",
   },
   title: {
-    fontSize: 30,
-    fontWeight: "bold",
-    color: "#111827",
-    marginBottom: 8,
+    fontSize: typography.fontSize["2xl"],
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.primary,
+    textAlign: "center",
+    marginBottom: spacing.sm,
   },
   subtitle: {
-    fontSize: 18,
-    color: "#4b5563",
-    marginBottom: 24,
+    fontSize: typography.fontSize.base,
+    color: colors.text.secondary,
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: spacing.lg,
   },
-  summaryBox: {
-    backgroundColor: "#f3f4f6",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 24,
+  summaryCard: {
+    padding: spacing.base,
+    marginBottom: spacing.lg,
   },
-  summaryRow: {
+  summaryHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 8,
+    alignItems: "center",
+    marginBottom: spacing.md,
   },
   summaryLabel: {
-    color: "#4b5563",
+    fontSize: typography.fontSize.sm,
+    color: colors.text.muted,
+    marginBottom: 2,
   },
-  summaryValue: {
-    fontWeight: "600",
-    color: "#111827",
+  summaryTotal: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.text.primary,
   },
-  textRed: {
-    color: "#ef4444",
+  remainingBadge: {
+    alignItems: "flex-end",
   },
-  textGreen: {
-    color: "#10b981",
+  remainingValue: {
+    fontSize: typography.fontSize.xl,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.status.success,
+  },
+  remainingNegative: {
+    color: colors.status.error,
+  },
+  remainingZero: {
+    color: colors.primary.blue,
+  },
+  remainingLabel: {
+    fontSize: typography.fontSize.xs,
+    color: colors.text.muted,
+  },
+  progressContainer: {
+    gap: spacing.xs,
+  },
+  progressTrack: {
+    height: 6,
+    backgroundColor: colors.surface.border,
+    borderRadius: 3,
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: "100%",
+    backgroundColor: colors.status.success,
+    borderRadius: 3,
+  },
+  progressOverflow: {
+    backgroundColor: colors.status.error,
+  },
+  progressText: {
+    fontSize: typography.fontSize.xs,
+    color: colors.text.muted,
+    textAlign: "right",
   },
   list: {
     flex: 1,
-    marginBottom: 24,
+    marginBottom: spacing.sm,
+  },
+  listContent: {
+    gap: spacing.sm,
   },
   priorityItem: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f9fafb",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    padding: spacing.base,
   },
   colorDot: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    marginRight: 12,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    marginRight: spacing.md,
   },
   priorityName: {
     flex: 1,
-    fontSize: 18,
-    color: "#111827",
+    fontSize: typography.fontSize.md,
+    color: colors.text.primary,
+    fontWeight: typography.fontWeight.medium,
   },
-  hoursInput: {
+  hoursInputContainer: {
     flexDirection: "row",
     alignItems: "center",
+    gap: spacing.xs,
   },
-  input: {
+  hoursInput: {
+    width: 56,
+    height: 40,
+    backgroundColor: colors.surface.secondary,
+    borderRadius: borderRadius.md,
     borderWidth: 1,
-    borderColor: "#d1d5db",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    width: 64,
+    borderColor: colors.surface.border,
     textAlign: "center",
-    fontSize: 18,
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.text.primary,
   },
   hoursLabel: {
-    marginLeft: 8,
-    color: "#6b7280",
+    fontSize: typography.fontSize.sm,
+    color: colors.text.muted,
+    width: 32,
   },
-  warningBox: {
-    backgroundColor: "#fef2f2",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+  warningBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
+    backgroundColor: "rgba(239, 68, 68, 0.15)",
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: "rgba(239, 68, 68, 0.3)",
+    padding: spacing.md,
+    marginBottom: spacing.md,
   },
   warningText: {
-    color: "#dc2626",
-    textAlign: "center",
+    fontSize: typography.fontSize.sm,
+    color: colors.status.error,
+    fontWeight: typography.fontWeight.medium,
   },
   button: {
-    backgroundColor: "#2563eb",
-    borderRadius: 12,
-    paddingVertical: 16,
+    flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
+    justifyContent: "center",
+    backgroundColor: colors.status.success,
+    borderRadius: borderRadius.xl,
+    paddingVertical: spacing.lg,
+    gap: spacing.sm,
+    marginBottom: spacing.base,
   },
   buttonDisabled: {
-    backgroundColor: "#d1d5db",
+    backgroundColor: colors.surface.secondary,
+    borderWidth: 1,
+    borderColor: colors.surface.border,
+  },
+  buttonPressed: {
+    opacity: 0.9,
+    transform: [{ scale: 0.98 }],
   },
   buttonText: {
     color: "#fff",
-    fontWeight: "600",
-    fontSize: 18,
+    fontWeight: typography.fontWeight.semibold,
+    fontSize: typography.fontSize.md,
+  },
+  buttonTextDisabled: {
+    color: colors.text.muted,
   },
 });

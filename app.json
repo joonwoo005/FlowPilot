@@ -49,34 +49,21 @@
       "expo-router",
       "expo-calendar",
       [
-        "react-native-widget-extension",
+        "@bacons/apple-targets",
         {
-          "widgetsFolder": "widgets",
-          "frequentUpdates": true,
-          "groupIdentifier": "group.com.junyutoh.weekfill"
+          "appleTeamId": "DM2F383HUE"
+        }
+      ],
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.163168772644-4g9vrqn2msepnrdggtcp28vtrqcdj582"
         }
       ]
     ],
     "extra": {
       "router": {},
       "eas": {
-        "build": {
-          "experimental": {
-            "ios": {
-              "appExtensions": [
-                {
-                  "targetName": "PlannerAppWidgets",
-                  "bundleIdentifier": "com.junyutoh.weekfill.widgets",
-                  "entitlements": {
-                    "com.apple.security.application-groups": [
-                      "group.com.junyutoh.weekfill"
-                    ]
-                  }
-                }
-              ]
-            }
-          }
-        },
         "projectId": "42c89b4b-458f-452d-a744-a3588da69222"
       }
     }

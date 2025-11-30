@@ -101,7 +101,7 @@ struct WidgetEntry: TimelineEntry {
     let timeRemaining: String?
 }
 
-// MARK: - Home Screen Widget View (2x1 / systemSmall)
+// MARK: - Home Screen Widget View (systemSmall)
 
 struct HomeScreenWidgetView: View {
     var entry: Provider.Entry
@@ -239,18 +239,11 @@ struct WidgetEntryView: View {
     }
 }
 
-// MARK: - Preview
+// MARK: - Widget Bundle Export
 
-#Preview(as: .systemSmall) {
-    WeekFillWidget()
-} timeline: {
-    WidgetEntry(date: .now, currentBlock: "Deep Work", timeRemaining: "1h 15m")
-    WidgetEntry(date: .now, currentBlock: nil, timeRemaining: nil)
-}
-
-#Preview(as: .accessoryRectangular) {
-    WeekFillWidget()
-} timeline: {
-    WidgetEntry(date: .now, currentBlock: "Deep Work", timeRemaining: "1h 15m")
-    WidgetEntry(date: .now, currentBlock: nil, timeRemaining: nil)
+@main
+struct ExportWidgets: WidgetBundle {
+    var body: some Widget {
+        WeekFillWidget()
+    }
 }
