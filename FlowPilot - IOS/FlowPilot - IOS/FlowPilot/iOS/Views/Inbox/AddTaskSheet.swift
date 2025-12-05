@@ -382,6 +382,12 @@ struct AddTaskSheet: View {
     @State private var showPriorityPicker = false
     @State private var showTimeBlockPicker = false
 
+    // Animation states for chip highlights
+    @State private var dateJustDetected = false
+    @State private var timeJustDetected = false
+    @State private var priorityJustDetected = false
+    @State private var timeBlockJustDetected = false
+
     @FocusState private var isNameFocused: Bool
 
     // Computed display values
@@ -440,10 +446,13 @@ struct AddTaskSheet: View {
 
                         // Input field with inline highlighting
                         ZStack(alignment: .topLeading) {
-                            // Highlighted text layer using AttributedString (behind)
-                            if !taskName.isEmpty {
-                                Text(buildAttributedString())
-                                    .padding(Spacing.base)
+                            // Highlighted text layer with rounded pill backgrounds
+                            if !taskName.isEmpty && !detectedComponents.allDetectedRanges.isEmpty {
+                                HighlightedTextView(
+                                    text: taskName,
+                                    detectedRanges: detectedComponents.allDetectedRanges
+                                )
+                                .padding(Spacing.base)
                             }
 
                             // Editable TextField (on top, transparent text when highlights exist)
@@ -681,6 +690,7 @@ struct AddTaskSheet: View {
             dueDate: finalDate,
             priority: displayPriority.value
         )
+
         Haptics.impact(.medium)
         dismiss()
     }
@@ -694,6 +704,7 @@ struct DetectionChip: View {
     let color: Color
     let onTap: () -> Void
     let onClear: (() -> Void)?
+    var isHighlighted: Bool = false
 
     var body: some View {
         HStack(spacing: Spacing.xs) {
@@ -727,6 +738,9 @@ struct DetectionChip: View {
                         .stroke(color.opacity(isActive ? 0 : 0.3), lineWidth: 1)
                 )
         )
+        .scaleEffect(isHighlighted ? 1.1 : 1.0)
+        .shadow(color: isHighlighted ? color.opacity(0.6) : .clear, radius: isHighlighted ? 8 : 0)
+        .animation(.spring(response: 0.35, dampingFraction: 0.6), value: isHighlighted)
         .onTapGesture {
             Haptics.impact(.light)
             onTap()
@@ -1067,8 +1081,85 @@ struct DurationOptionCell: View {
     }
 }
 
-// MARK: - Highlighted Text View (kept for reference but not currently used)
-// The AttributedString approach is now used directly in AddTaskSheet
+// MARK: - Highlighted Text View with Rounded Rectangles
+struct HighlightedTextView: View {
+    let text: String
+    let detectedRanges: [(startOffset: Int, endOffset: Int, type: DetectedComponents.DetectionType)]
+
+    var body: some View {
+        FlowLayout(spacing: 0) {
+            ForEach(Array(buildSegments().enumerated()), id: \.offset) { _, segment in
+                if let type = segment.type {
+                    Text(segment.text)
+                        .font(Typography.bodyLarge)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                .fill(type.color)
+                        )
+                } else {
+                    ForEach(Array(splitWords(segment.text).enumerated()), id: \.offset) { _, word in
+                        Text(word).font(Typography.bodyLarge).foregroundColor(.textPrimary)
+                    }
+                }
+            }
+        }
+    }
+
+    private struct Segment { let text: String; let type: DetectedComponents.DetectionType? }
+
+    private func buildSegments() -> [Segment] {
+        guard !text.isEmpty else { return [] }
+        var segments: [Segment] = []
+        var offset = 0
+        for (start, end, type) in detectedRanges.sorted(by: { $0.startOffset < $1.startOffset }) {
+            guard let si = text.index(text.startIndex, offsetBy: start, limitedBy: text.endIndex),
+                  let ei = text.index(text.startIndex, offsetBy: end, limitedBy: text.endIndex),
+                  start >= offset, si < ei else { continue }
+            if offset < start, let ci = text.index(text.startIndex, offsetBy: offset, limitedBy: text.endIndex) {
+                segments.append(Segment(text: String(text[ci..<si]), type: nil))
+            }
+            segments.append(Segment(text: String(text[si..<ei]), type: type))
+            offset = end
+        }
+        if offset < text.count, let ci = text.index(text.startIndex, offsetBy: offset, limitedBy: text.endIndex) {
+            segments.append(Segment(text: String(text[ci...]), type: nil))
+        }
+        return segments
+    }
+
+    private func splitWords(_ s: String) -> [String] {
+        var r: [String] = []; var c = ""
+        for ch in s { if ch == " " { if !c.isEmpty { r.append(c); c = "" }; r.append(" ") } else { c.append(ch) } }
+        if !c.isEmpty { r.append(c) }; return r
+    }
+}
+
+// MARK: - Flow Layout
+struct FlowLayout: Layout {
+    var spacing: CGFloat = 0
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        arrange(proposal: proposal, subviews: subviews).size
+    }
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        for (i, p) in arrange(proposal: proposal, subviews: subviews).positions.enumerated() {
+            subviews[i].place(at: CGPoint(x: bounds.minX + p.x, y: bounds.minY + p.y),
+                              proposal: ProposedViewSize(subviews[i].sizeThatFits(.unspecified)))
+        }
+    }
+    private func arrange(proposal: ProposedViewSize, subviews: Subviews) -> (size: CGSize, positions: [CGPoint]) {
+        let maxW = proposal.width ?? .infinity
+        var pos: [CGPoint] = []; var x: CGFloat = 0, y: CGFloat = 0, lh: CGFloat = 0, tw: CGFloat = 0
+        for sv in subviews {
+            let sz = sv.sizeThatFits(.unspecified)
+            if x + sz.width > maxW && x > 0 { x = 0; y += lh + spacing; lh = 0 }
+            pos.append(CGPoint(x: x, y: y)); x += sz.width; lh = max(lh, sz.height); tw = max(tw, x)
+        }
+        return (CGSize(width: tw, height: y + lh), pos)
+    }
+}
 
 #Preview {
     AddTaskSheet(taskStore: TaskStore(), priorityStore: OnboardingState())
