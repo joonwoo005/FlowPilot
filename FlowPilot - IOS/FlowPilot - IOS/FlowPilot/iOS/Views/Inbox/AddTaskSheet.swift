@@ -482,40 +482,26 @@ struct AddTaskSheet: View {
                                 )
                         )
                         .onChange(of: taskName) {
-                            // Capture previous detection state
-                            let previousRanges = detectedComponents.allDetectedRanges
+                            // Capture previous detection count
+                            let previousCount = detectedComponents.allDetectedRanges.count
 
                             withAnimation(.easeOut(duration: 0.15)) {
                                 detectedComponents = SmartTextParser.parse(taskName, priorities: priorityStore.priorities)
                             }
 
-                            // Auto-insert spaces after newly detected components
-                            let newRanges = detectedComponents.allDetectedRanges
-                            if newRanges.count > previousRanges.count {
-                                // Find the newest detection (highest end offset)
-                                if let newest = newRanges.max(by: { $0.endOffset < $1.endOffset }) {
-                                    let endOffset = newest.endOffset
-                                    // Check if there's already spacing after the detection
-                                    if endOffset < taskName.count {
-                                        if let endIndex = taskName.index(taskName.startIndex, offsetBy: endOffset, limitedBy: taskName.endIndex) {
-                                            let remaining = String(taskName[endIndex...])
-                                            // Only insert if not already followed by two spaces
-                                            if !remaining.hasPrefix("  ") {
-                                                taskName.insert(contentsOf: "  ", at: endIndex)
-                                            }
-                                        }
-                                    } else if endOffset == taskName.count {
-                                        // Detection is at end of text, add spaces
-                                        taskName.append("  ")
-                                    }
-                                }
+                            // Auto-insert spaces when a new detection is made at end of text
+                            let newCount = detectedComponents.allDetectedRanges.count
+                            if newCount > previousCount && !taskName.hasSuffix("  ") {
+                                // A new detection was made, add spacing
+                                taskName.append("  ")
                             }
 
                             // Check for newly detected components and trigger highlights
-                            let hadDate = previousRanges.contains { $0.type == .date }
-                            let hadTime = previousRanges.contains { $0.type == .time }
-                            let hadPriority = previousRanges.contains { $0.type == .priority }
-                            let hadTimeBlock = previousRanges.contains { $0.type == .timeBlock }
+                            let previousRanges = detectedComponents.allDetectedRanges
+                            let hadDate = previousCount > 0 && previousRanges.contains { $0.type == .date }
+                            let hadTime = previousCount > 0 && previousRanges.contains { $0.type == .time }
+                            let hadPriority = previousCount > 0 && previousRanges.contains { $0.type == .priority }
+                            let hadTimeBlock = previousCount > 0 && previousRanges.contains { $0.type == .timeBlock }
 
                             let nowHasDate = detectedComponents.dateText != nil
                             let nowHasTime = detectedComponents.timeText != nil
