@@ -783,9 +783,14 @@ struct DetectionChip: View {
                         .stroke(color.opacity(isActive ? 0 : 0.3), lineWidth: 1)
                 )
         )
-        .scaleEffect(isHighlighted ? 1.1 : 1.0)
-        .shadow(color: isHighlighted ? color.opacity(0.6) : .clear, radius: isHighlighted ? 8 : 0)
-        .animation(.spring(response: 0.35, dampingFraction: 0.6), value: isHighlighted)
+        .overlay(
+            // Animated highlight ring
+            Capsule()
+                .stroke(color, lineWidth: isHighlighted ? 2 : 0)
+                .opacity(isHighlighted ? 1 : 0)
+        )
+        .opacity(isHighlighted ? 0.85 : 1.0)
+        .animation(.easeInOut(duration: 0.15).repeatCount(3, autoreverses: true), value: isHighlighted)
         .onTapGesture {
             Haptics.impact(.light)
             onTap()
@@ -1135,14 +1140,14 @@ struct HighlightedTextView: View {
         FlowLayout(spacing: 0) {
             ForEach(Array(buildSegments().enumerated()), id: \.offset) { _, segment in
                 if let type = segment.type {
-                    // Highlighted text - background extends beyond text without shifting position
+                    // Highlighted text - background extends slightly beyond text
                     Text(segment.text)
                         .font(Typography.bodyLarge)
                         .foregroundColor(.white)
                         .background(
                             RoundedRectangle(cornerRadius: 4, style: .continuous)
                                 .fill(type.color)
-                                .padding(.horizontal, -3)
+                                .padding(.horizontal, -2)
                                 .padding(.vertical, -1)
                         )
                 } else {
