@@ -1136,19 +1136,15 @@ struct HighlightedTextView: View {
             ForEach(Array(buildSegments().enumerated()), id: \.offset) { _, segment in
                 if let type = segment.type {
                     // Highlighted text - background extends beyond text without shifting position
-                    HStack(spacing: 0) {
-                        Text(segment.text)
-                            .font(Typography.bodyLarge)
-                            .foregroundColor(.white)
-                            .background(
-                                RoundedRectangle(cornerRadius: 4, style: .continuous)
-                                    .fill(type.color)
-                                    .padding(.horizontal, -4)
-                                    .padding(.vertical, -2)
-                            )
-                        // Add small gap after highlighted text
-                        Text(" ").font(Typography.bodyLarge)
-                    }
+                    Text(segment.text)
+                        .font(Typography.bodyLarge)
+                        .foregroundColor(.white)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                .fill(type.color)
+                                .padding(.horizontal, -3)
+                                .padding(.vertical, -1)
+                        )
                 } else {
                     ForEach(Array(splitWords(segment.text).enumerated()), id: \.offset) { _, word in
                         Text(word).font(Typography.bodyLarge).foregroundColor(.textPrimary)
