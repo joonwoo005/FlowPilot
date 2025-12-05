@@ -218,19 +218,21 @@ struct LoginView: View {
                     }
                 }
             } label: {
-                Image("GoogleButton")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(height: 50)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 4)
-                    .background(
-                        RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
-                            .fill(Color.white)
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
-                    .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
-                    .compositingGroup()
+                HStack(spacing: Spacing.sm) {
+                    GoogleIcon()
+                        .frame(width: 20, height: 20)
+
+                    Text("Continue with Google")
+                        .font(.system(size: 16, weight: .regular))
+                        .foregroundColor(Color(hex: "1F1F1F"))
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 54)
+                .background(
+                    RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
+                        .fill(Color.white)
+                )
+                .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
             }
             .buttonStyle(ScaleButtonStyle())
 
