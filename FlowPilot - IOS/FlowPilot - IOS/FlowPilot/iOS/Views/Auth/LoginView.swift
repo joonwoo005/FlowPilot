@@ -46,7 +46,7 @@ struct LoginView: View {
                         .offset(y: showContent ? 0 : 20)
 
                     Spacer()
-                        .frame(minHeight: Spacing.md, maxHeight: Spacing.lg)
+                        .frame(minHeight: Spacing.lg, maxHeight: Spacing.xl)
 
                     // Sign in actions
                     signInActions
