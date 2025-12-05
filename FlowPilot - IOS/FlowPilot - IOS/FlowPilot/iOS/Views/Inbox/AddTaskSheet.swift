@@ -482,8 +482,49 @@ struct AddTaskSheet: View {
                                 )
                         )
                         .onChange(of: taskName) {
+                            // Capture previous detection state
+                            let hadDate = detectedComponents.dateText != nil
+                            let hadTime = detectedComponents.timeText != nil
+                            let hadPriority = detectedComponents.priorityText != nil
+                            let hadTimeBlock = detectedComponents.timeBlockText != nil
+
                             withAnimation(.easeOut(duration: 0.15)) {
                                 detectedComponents = SmartTextParser.parse(taskName, priorities: priorityStore.priorities)
+                            }
+
+                            // Check for newly detected components and trigger highlights
+                            let nowHasDate = detectedComponents.dateText != nil
+                            let nowHasTime = detectedComponents.timeText != nil
+                            let nowHasPriority = detectedComponents.priorityText != nil
+                            let nowHasTimeBlock = detectedComponents.timeBlockText != nil
+
+                            if !hadDate && nowHasDate {
+                                dateJustDetected = true
+                                Task {
+                                    try? await Task.sleep(nanoseconds: 600_000_000)
+                                    await MainActor.run { dateJustDetected = false }
+                                }
+                            }
+                            if !hadTime && nowHasTime {
+                                timeJustDetected = true
+                                Task {
+                                    try? await Task.sleep(nanoseconds: 600_000_000)
+                                    await MainActor.run { timeJustDetected = false }
+                                }
+                            }
+                            if !hadPriority && nowHasPriority {
+                                priorityJustDetected = true
+                                Task {
+                                    try? await Task.sleep(nanoseconds: 600_000_000)
+                                    await MainActor.run { priorityJustDetected = false }
+                                }
+                            }
+                            if !hadTimeBlock && nowHasTimeBlock {
+                                timeBlockJustDetected = true
+                                Task {
+                                    try? await Task.sleep(nanoseconds: 600_000_000)
+                                    await MainActor.run { timeBlockJustDetected = false }
+                                }
                             }
                         }
                     }
@@ -509,7 +550,8 @@ struct AddTaskSheet: View {
                                         ))
                                         detectedComponents = SmartTextParser.parse(taskName, priorities: priorityStore.priorities)
                                     }
-                                } : nil
+                                } : nil,
+                                isHighlighted: dateJustDetected
                             )
 
                             // Time chip
@@ -529,7 +571,8 @@ struct AddTaskSheet: View {
                                         ))
                                         detectedComponents = SmartTextParser.parse(taskName, priorities: priorityStore.priorities)
                                     }
-                                } : nil
+                                } : nil,
+                                isHighlighted: timeJustDetected
                             )
 
                             // Time Block chip
@@ -549,7 +592,8 @@ struct AddTaskSheet: View {
                                         ))
                                         detectedComponents = SmartTextParser.parse(taskName, priorities: priorityStore.priorities)
                                     }
-                                } : nil
+                                } : nil,
+                                isHighlighted: timeBlockJustDetected
                             )
 
                             // Priority chip
@@ -569,7 +613,8 @@ struct AddTaskSheet: View {
                                         ))
                                         detectedComponents = SmartTextParser.parse(taskName, priorities: priorityStore.priorities)
                                     }
-                                } : nil
+                                } : nil,
+                                isHighlighted: priorityJustDetected
                             )
                         }
                     }
@@ -1090,14 +1135,15 @@ struct HighlightedTextView: View {
         FlowLayout(spacing: 0) {
             ForEach(Array(buildSegments().enumerated()), id: \.offset) { _, segment in
                 if let type = segment.type {
+                    // Highlighted text - background extends beyond text without shifting position
                     Text(segment.text)
                         .font(Typography.bodyLarge)
                         .foregroundColor(.white)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
                         .background(
-                            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            RoundedRectangle(cornerRadius: 4, style: .continuous)
                                 .fill(type.color)
+                                .padding(.horizontal, -4)
+                                .padding(.vertical, -2)
                         )
                 } else {
                     ForEach(Array(splitWords(segment.text).enumerated()), id: \.offset) { _, word in
