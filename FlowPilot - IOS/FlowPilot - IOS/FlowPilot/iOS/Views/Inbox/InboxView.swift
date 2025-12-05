@@ -296,11 +296,10 @@ struct TaskRow: View {
     let task: FlowTask
     @ObservedObject var taskStore: TaskStore
 
-    @State private var showUndo = false
-
-    private var isPendingCompletion: Bool {
-        taskStore.pendingCompletions[task.id] != nil
-    }
+    @State private var isPendingCompletion = false
+    @State private var strikethroughProgress: CGFloat = 0
+    @State private var checkmarkScale: CGFloat = 0
+    @State private var completionTimer: DispatchWorkItem?
 
     var body: some View {
         HStack(spacing: Spacing.md) {
@@ -309,11 +308,14 @@ struct TaskRow: View {
 
             // Task content
             VStack(alignment: .leading, spacing: 2) {
-                Text(task.name)
-                    .font(Typography.bodyMedium)
-                    .foregroundColor(task.isCompleted ? .textMuted : .textPrimary)
-                    .strikethrough(task.isCompleted, color: .textMuted)
-                    .lineLimit(2)
+                // Task name with animated strikethrough
+                AnimatedStrikethroughText(
+                    text: task.name,
+                    progress: task.isCompleted ? 1 : strikethroughProgress,
+                    textColor: (isPendingCompletion || task.isCompleted) ? .textMuted : .textPrimary,
+                    strikeColor: .textMuted
+                )
+                .lineLimit(2)
 
                 // Meta info
                 HStack(spacing: Spacing.sm) {
@@ -343,54 +345,128 @@ struct TaskRow: View {
             }
 
             Spacer()
-
-            // Undo button (appears briefly after completion)
-            if isPendingCompletion {
-                Text("Undo")
-                    .font(Typography.labelSmall)
-                    .foregroundColor(.accentPrimary)
-                    .padding(.horizontal, Spacing.sm)
-                    .padding(.vertical, Spacing.xs)
-                    .background(
-                        Capsule()
-                            .fill(Color.accentPrimary.opacity(0.1))
-                    )
-                    .onTapGesture {
-                        Haptics.impact(.light)
-                        taskStore.undoComplete(task)
-                    }
-                    .transition(.scale.combined(with: .opacity))
-            }
         }
         .padding(.vertical, Spacing.sm)
         .padding(.horizontal, Spacing.xs)
         .contentShape(Rectangle())
-        .opacity(task.isCompleted && !isPendingCompletion ? 0.5 : 1)
+        .opacity(task.isCompleted ? 0.5 : 1)
         .animation(.easeInOut(duration: 0.2), value: task.isCompleted)
-        .animation(.easeInOut(duration: 0.2), value: isPendingCompletion)
     }
 
     private var checkboxView: some View {
         ZStack {
-            if task.isCompleted {
-                Circle()
-                    .fill(Color.accentSuccess)
-                    .frame(width: 22, height: 22)
+            // Background circle
+            Circle()
+                .stroke(task.dueStatus.color, lineWidth: 2)
+                .frame(width: 22, height: 22)
+                .opacity(isPendingCompletion || task.isCompleted ? 0 : 1)
 
-                Image(systemName: "checkmark")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(.white)
-            } else {
-                Circle()
-                    .stroke(task.dueStatus.color, lineWidth: 2)
-                    .frame(width: 22, height: 22)
-            }
+            // Filled circle (for pending/completed)
+            Circle()
+                .fill(Color.accentSuccess)
+                .frame(width: 22, height: 22)
+                .opacity(isPendingCompletion || task.isCompleted ? 1 : 0)
+                .scaleEffect(isPendingCompletion || task.isCompleted ? 1 : 0.5)
+
+            // Checkmark with scale animation
+            Image(systemName: "checkmark")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundColor(.white)
+                .scaleEffect(checkmarkScale)
+                .opacity(checkmarkScale > 0 ? 1 : 0)
         }
         .contentShape(Circle())
         .onTapGesture {
-            Haptics.impact(.light)
-            taskStore.toggleComplete(task)
+            handleCheckboxTap()
         }
+        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isPendingCompletion)
+        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: checkmarkScale)
+    }
+
+    private func handleCheckboxTap() {
+        if task.isCompleted {
+            // Uncomplete the task
+            Haptics.impact(.light)
+            taskStore.uncompleteTask(task)
+            return
+        }
+
+        if isPendingCompletion {
+            // Cancel pending completion
+            Haptics.impact(.light)
+            cancelPendingCompletion()
+        } else {
+            // Start pending completion
+            Haptics.impact(.medium)
+            startPendingCompletion()
+        }
+    }
+
+    private func startPendingCompletion() {
+        isPendingCompletion = true
+
+        // Animate checkmark
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+            checkmarkScale = 1
+        }
+
+        // Animate strikethrough
+        withAnimation(.easeInOut(duration: 0.4)) {
+            strikethroughProgress = 1
+        }
+
+        // Schedule actual completion after 1.5s
+        let workItem = DispatchWorkItem { [self] in
+            completeTask()
+        }
+        completionTimer = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5, execute: workItem)
+    }
+
+    private func cancelPendingCompletion() {
+        // Cancel timer
+        completionTimer?.cancel()
+        completionTimer = nil
+
+        // Reverse animations
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+            checkmarkScale = 0
+            isPendingCompletion = false
+        }
+
+        withAnimation(.easeInOut(duration: 0.3)) {
+            strikethroughProgress = 0
+        }
+    }
+
+    private func completeTask() {
+        taskStore.completeTask(task)
+        // Reset local state since task is now completed
+        isPendingCompletion = false
+        strikethroughProgress = 0
+        checkmarkScale = 0
+    }
+}
+
+// MARK: - Animated Strikethrough Text
+struct AnimatedStrikethroughText: View {
+    let text: String
+    let progress: CGFloat
+    let textColor: Color
+    let strikeColor: Color
+
+    var body: some View {
+        Text(text)
+            .font(Typography.bodyMedium)
+            .foregroundColor(textColor)
+            .overlay(alignment: .leading) {
+                GeometryReader { geometry in
+                    Rectangle()
+                        .fill(strikeColor)
+                        .frame(width: geometry.size.width * progress, height: 1.5)
+                        .offset(y: geometry.size.height / 2 - 0.75)
+                }
+            }
     }
 }
 

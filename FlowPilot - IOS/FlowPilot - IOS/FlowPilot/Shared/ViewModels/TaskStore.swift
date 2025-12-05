@@ -56,7 +56,7 @@ class TaskStore: ObservableObject {
     }
 
     /// Tasks grouped by individual days for display (sorted by date)
-    /// Overdue tasks are grouped together, then individual days, then undated
+    /// Order: Overdue -> Not set (undated) -> Today -> Future days
     var tasksByDay: [DaySection] {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
@@ -66,6 +66,11 @@ class TaskStore: ObservableObject {
         // Add overdue section first (all overdue tasks grouped together)
         if !overdueTasks.isEmpty {
             result.append(DaySection(date: nil, title: "Overdue", color: .dueDateOverdue, tasks: overdueTasks))
+        }
+
+        // Add undated tasks right after overdue
+        if !undatedTasks.isEmpty {
+            result.append(DaySection(date: nil, title: "Not set", color: .textMuted, tasks: undatedTasks))
         }
 
         // Group non-overdue dated tasks by day
@@ -82,11 +87,6 @@ class TaskStore: ObservableObject {
             return DaySection(date: date, title: title, color: color, tasks: tasks)
         }
 
-        // Add undated at the end if any
-        if !undatedTasks.isEmpty {
-            result.append(DaySection(date: nil, title: "No Due Date", color: .textMuted, tasks: undatedTasks))
-        }
-
         return result
     }
 
@@ -101,7 +101,8 @@ class TaskStore: ObservableObject {
             if let date = date {
                 return date.timeIntervalSince1970.description
             }
-            return "undated"
+            // Use title for sections without dates (Overdue, No Due Date)
+            return title
         }
     }
 
@@ -220,6 +221,25 @@ class TaskStore: ObservableObject {
                 tasks[index].completedAt = nil
             }
             pendingCompletions.removeValue(forKey: task.id)
+        }
+    }
+
+    func completeTask(_ task: FlowTask) {
+        guard let index = tasks.firstIndex(where: { $0.id == task.id }) else { return }
+
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+            tasks[index].isCompleted = true
+            tasks[index].completedAt = Date()
+        }
+        logActivity(taskId: task.id, taskName: task.name, action: .completed)
+    }
+
+    func uncompleteTask(_ task: FlowTask) {
+        guard let index = tasks.firstIndex(where: { $0.id == task.id }) else { return }
+
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+            tasks[index].isCompleted = false
+            tasks[index].completedAt = nil
         }
     }
 

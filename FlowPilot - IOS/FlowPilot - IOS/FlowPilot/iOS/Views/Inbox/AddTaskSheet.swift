@@ -426,7 +426,7 @@ struct AddTaskSheet: View {
                             .focused($isNameFocused)
                             .lineLimit(3)
                             .placeholder(when: taskName.isEmpty) {
-                                Text("Add task... try \"Meeting tomorrow at 2pm\"")
+                                Text("e.g. Meeting tomorrow 2pm")
                                     .font(Typography.bodyLarge)
                                     .foregroundColor(.textMuted)
                             }
@@ -493,7 +493,7 @@ struct AddTaskSheet: View {
                             // Time Block chip
                             DetectionChip(
                                 icon: "timer",
-                                label: displayTimeBlock.text ?? "Duration",
+                                label: displayTimeBlock.text ?? "Time block",
                                 isActive: displayTimeBlock.text != nil,
                                 color: Color(red: 0.6, green: 0.25, blue: 0.25),
                                 onTap: { showTimeBlockPicker = true },
@@ -549,10 +549,11 @@ struct AddTaskSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Text("Cancel")
-                        .font(Typography.bodyMedium)
+                    Image(systemName: "xmark")
+                        .font(.system(size: 16, weight: .medium))
                         .foregroundColor(.textSecondary)
                         .onTapGesture {
+                            Haptics.impact(.light)
                             dismiss()
                         }
                 }

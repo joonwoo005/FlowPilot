@@ -1,17 +1,18 @@
 import SwiftUI
 
 struct LoginView: View {
+    @ObservedObject var authService: AuthService
+
     @State private var showContent = false
     @State private var showButtons = false
     @State private var pulseIcon = false
     @State private var orbitPhase: CGFloat = 0
+    @State private var showError = false
+    @State private var errorMessage = ""
 
     // Welcome screen accent colors (warm coral)
     private let accentCoral = Color(hex: "FF6B5B")
     private let accentCoralLight = Color(hex: "FF8A7A")
-
-    let onGoogleSignIn: () -> Void
-    let onGuestContinue: () -> Void
 
     var body: some View {
         GeometryReader { geometry in
@@ -62,6 +63,11 @@ struct LoginView: View {
         .ignoresSafeArea()
         .onAppear {
             startAnimations()
+        }
+        .alert("Sign In Error", isPresented: $showError) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(errorMessage)
         }
     }
 
@@ -203,7 +209,14 @@ struct LoginView: View {
             // Primary: Google Sign In
             Button {
                 Haptics.impact(.medium)
-                onGoogleSignIn()
+                Task {
+                    do {
+                        try await authService.signInWithGoogle()
+                    } catch {
+                        errorMessage = error.localizedDescription
+                        showError = true
+                    }
+                }
             } label: {
                 Image("GoogleButton")
                     .resizable()
@@ -224,7 +237,14 @@ struct LoginView: View {
             // Secondary: Guest access
             Button {
                 Haptics.impact(.light)
-                onGuestContinue()
+                Task {
+                    do {
+                        try await authService.continueAsGuest()
+                    } catch {
+                        errorMessage = error.localizedDescription
+                        showError = true
+                    }
+                }
             } label: {
                 HStack(spacing: Spacing.sm) {
                     Image(systemName: "person.crop.circle")
@@ -373,8 +393,5 @@ struct ScaleButtonStyle: ButtonStyle {
 }
 
 #Preview {
-    LoginView(
-        onGoogleSignIn: {},
-        onGuestContinue: {}
-    )
+    LoginView(authService: AuthService.shared)
 }
