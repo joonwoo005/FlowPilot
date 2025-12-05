@@ -33,6 +33,14 @@ class AuthService: ObservableObject {
             Task { @MainActor in
                 self?.currentUser = user
                 self?.isAuthenticated = user != nil
+
+                #if DEBUG
+                if let user = user {
+                    print("[Auth] Auth state changed - User: \(user.uid), Anonymous: \(user.isAnonymous)")
+                } else {
+                    print("[Auth] Auth state changed - No user")
+                }
+                #endif
             }
         }
     }

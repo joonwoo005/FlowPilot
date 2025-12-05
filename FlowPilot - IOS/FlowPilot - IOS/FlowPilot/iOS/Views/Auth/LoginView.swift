@@ -329,19 +329,15 @@ struct FeatureRow: View {
     let accent: Color
 
     var body: some View {
-        HStack(spacing: Spacing.base) {
+        HStack(spacing: Spacing.sm) {
             Image(systemName: icon)
                 .font(.system(size: 18, weight: .medium))
                 .foregroundColor(accent)
-                .frame(width: 28)
 
             Text(text)
                 .font(Typography.bodyMedium)
                 .foregroundColor(.textSecondary)
-
-            Spacer()
         }
-        .padding(.horizontal, Spacing.base)
     }
 }
 

@@ -46,11 +46,18 @@ struct InboxView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     HStack(spacing: Spacing.md) {
-                        activeTasksCounter
                         activityLogButton
                         settingsButton
                     }
                 }
+            }
+            .safeAreaInset(edge: .top, spacing: 0) {
+                HStack {
+                    Spacer()
+                    activeTasksCounter
+                }
+                .padding(.horizontal, Spacing.lg)
+                .padding(.bottom, Spacing.sm)
             }
             .sheet(isPresented: $showActivityLog) {
                 ActivityLogSheet(

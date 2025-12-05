@@ -23,17 +23,14 @@ struct SleepSchedule {
 
     static let `default`: SleepSchedule = {
         let calendar = Calendar.current
-        var wakeComponents = DateComponents()
-        wakeComponents.hour = 7
-        wakeComponents.minute = 0
+        let today = Date()
 
-        var sleepComponents = DateComponents()
-        sleepComponents.hour = 23
-        sleepComponents.minute = 0
+        let wakeTime = calendar.date(bySettingHour: 7, minute: 0, second: 0, of: today) ?? today
+        let sleepTime = calendar.date(bySettingHour: 23, minute: 0, second: 0, of: today) ?? today
 
         return SleepSchedule(
-            wakeTime: calendar.date(from: wakeComponents) ?? Date(),
-            sleepTime: calendar.date(from: sleepComponents) ?? Date()
+            wakeTime: wakeTime,
+            sleepTime: sleepTime
         )
     }()
 }

@@ -1,4 +1,5 @@
 import SwiftUI
+import FirebaseAuth
 
 @main
 struct FlowPilotiOSApp: App {
@@ -7,6 +8,9 @@ struct FlowPilotiOSApp: App {
 
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @AppStorage("userName") private var userName = ""
+
+    @State private var isLoadingUserData = false
+    @State private var hasCheckedFirebase = false
 
     init() {
         // Configure Firebase
@@ -23,6 +27,17 @@ struct FlowPilotiOSApp: App {
                 if !authService.isAuthenticated {
                     // Show Login Screen
                     LoginView(authService: authService)
+                        .onAppear {
+                            // Reset check state when logged out
+                            hasCheckedFirebase = false
+                        }
+                } else if isLoadingUserData {
+                    // Loading state while checking Firebase
+                    ZStack {
+                        Color.backgroundPrimary.ignoresSafeArea()
+                        ProgressView()
+                            .tint(.accentPrimary)
+                    }
                 } else if !hasCompletedOnboarding {
                     // Show Onboarding
                     OnboardingContainerView(
@@ -39,6 +54,9 @@ struct FlowPilotiOSApp: App {
                                 await saveOnboardingData(state)
                             }
 
+                            // Mark as checked to prevent Firebase from overwriting
+                            hasCheckedFirebase = true
+
                             withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
                                 hasCompletedOnboarding = true
                             }
@@ -47,15 +65,87 @@ struct FlowPilotiOSApp: App {
                 } else {
                     // Show Main App
                     MainTabView(userName: userName, priorityStore: onboardingState)
-                        .onAppear {
-                            // Load user data from Firestore
-                            Task {
-                                await loadUserData()
-                            }
-                        }
                 }
             }
             .preferredColorScheme(.dark)
+            .onChange(of: authService.isAuthenticated) { _, isAuthenticated in
+                if isAuthenticated && !hasCheckedFirebase {
+                    // Check Firebase for returning users
+                    Task {
+                        await checkUserDataFromFirebase()
+                    }
+                }
+            }
+            .onAppear {
+                // Check on initial launch if already authenticated
+                if authService.isAuthenticated && !hasCheckedFirebase {
+                    Task {
+                        await checkUserDataFromFirebase()
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Check User Data from Firebase
+    private func checkUserDataFromFirebase() async {
+        guard let userId = FirebaseConfig.shared.currentUserId else {
+            #if DEBUG
+            print("[App] No user ID found, skipping Firebase check")
+            #endif
+            await MainActor.run {
+                hasCheckedFirebase = true
+                isLoadingUserData = false
+            }
+            return
+        }
+
+        #if DEBUG
+        let isAnonymous = FirebaseConfig.shared.auth.currentUser?.isAnonymous ?? false
+        print("[App] Checking Firebase for user: \(userId) (anonymous: \(isAnonymous))")
+        #endif
+
+        await MainActor.run { isLoadingUserData = true }
+
+        do {
+            if let userData = try await UserRepository.shared.getUser(userId: userId) {
+                #if DEBUG
+                print("[App] Found user data - hasCompletedOnboarding: \(userData.hasCompletedOnboarding)")
+                #endif
+
+                await MainActor.run {
+                    userName = userData.displayName
+                    hasCompletedOnboarding = userData.hasCompletedOnboarding
+
+                    if let wakeTime = userData.wakeTime {
+                        onboardingState.sleepSchedule.wakeTime = wakeTime
+                    }
+                    if let sleepTime = userData.sleepTime {
+                        onboardingState.sleepSchedule.sleepTime = sleepTime
+                    }
+                }
+
+                // Load priorities
+                let priorities = try await PriorityRepository.shared.getAllPriorities(userId: userId)
+                await MainActor.run {
+                    onboardingState.priorities = priorities
+                }
+
+                #if DEBUG
+                print("[App] Loaded \(priorities.count) priorities")
+                #endif
+            } else {
+                #if DEBUG
+                print("[App] No user document found in Firebase - new user")
+                #endif
+            }
+        } catch {
+            print("[App] Error checking user data: \(error.localizedDescription)")
+        }
+
+        await MainActor.run {
+            isLoadingUserData = false
+            hasCheckedFirebase = true
         }
     }
 
@@ -88,37 +178,4 @@ struct FlowPilotiOSApp: App {
         }
     }
 
-    // MARK: - Load User Data
-    private func loadUserData() async {
-        guard let userId = FirebaseConfig.shared.currentUserId else { return }
-
-        do {
-            // Load user profile
-            if let userData = try await UserRepository.shared.getUser(userId: userId) {
-                await MainActor.run {
-                    userName = userData.displayName
-                    hasCompletedOnboarding = userData.hasCompletedOnboarding
-
-                    if let wakeTime = userData.wakeTime {
-                        onboardingState.sleepSchedule.wakeTime = wakeTime
-                    }
-                    if let sleepTime = userData.sleepTime {
-                        onboardingState.sleepSchedule.sleepTime = sleepTime
-                    }
-                }
-            }
-
-            // Load priorities
-            let priorities = try await PriorityRepository.shared.getAllPriorities(userId: userId)
-            await MainActor.run {
-                onboardingState.priorities = priorities
-            }
-
-            #if DEBUG
-            print("[App] User data loaded successfully")
-            #endif
-        } catch {
-            print("[App] Error loading user data: \(error.localizedDescription)")
-        }
-    }
 }
