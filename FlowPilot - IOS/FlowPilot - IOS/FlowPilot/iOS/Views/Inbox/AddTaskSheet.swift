@@ -11,7 +11,8 @@ struct DetectedComponents {
     var timeBlockText: String?
     var timeBlockDuration: Int? // minutes
 
-    var allDetectedRanges: [(range: Range<String.Index>, type: DetectionType)] = []
+    // Store positions as integers for reliable cross-string usage
+    var allDetectedRanges: [(startOffset: Int, endOffset: Int, type: DetectionType)] = []
 
     enum DetectionType {
         case date, time, priority, timeBlock
@@ -31,8 +32,8 @@ struct DetectedComponents {
 class SmartTextParser {
     // Candidate match with position for sorting
     struct Candidate {
-        let position: Int
-        let range: Range<String.Index>
+        let startOffset: Int
+        let endOffset: Int
         let text: String
         let value: Any
     }
@@ -49,9 +50,11 @@ class SmartTextParser {
         let shortDayNames = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"]
         let monthNames = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]
 
-        // Helper to get position from range
-        func position(of range: Range<String.Index>) -> Int {
-            lowercased.distance(from: lowercased.startIndex, to: range.lowerBound)
+        // Helper to get integer offsets from range
+        func offsets(of range: Range<String.Index>) -> (start: Int, end: Int) {
+            let start = lowercased.distance(from: lowercased.startIndex, to: range.lowerBound)
+            let end = lowercased.distance(from: lowercased.startIndex, to: range.upperBound)
+            return (start, end)
         }
 
         // Helper to extract day number from ordinal or plain number
@@ -65,27 +68,31 @@ class SmartTextParser {
 
         // "today"
         if let range = lowercased.range(of: "today") {
-            dateCandidates.append(Candidate(position: position(of: range), range: range, text: "Today", value: today))
+            let pos = offsets(of: range)
+            dateCandidates.append(Candidate(startOffset: pos.start, endOffset: pos.end, text: "Today", value: today))
         }
 
         // "tomorrow"
         if let range = lowercased.range(of: "tomorrow") {
             if let date = calendar.date(byAdding: .day, value: 1, to: today) {
-                dateCandidates.append(Candidate(position: position(of: range), range: range, text: "Tomorrow", value: date))
+                let pos = offsets(of: range)
+                dateCandidates.append(Candidate(startOffset: pos.start, endOffset: pos.end, text: "Tomorrow", value: date))
             }
         }
 
         // "tmr"
         if let range = lowercased.range(of: " tmr") ?? lowercased.range(of: "^tmr", options: .regularExpression) {
             if let date = calendar.date(byAdding: .day, value: 1, to: today) {
-                dateCandidates.append(Candidate(position: position(of: range), range: range, text: "Tomorrow", value: date))
+                let pos = offsets(of: range)
+                dateCandidates.append(Candidate(startOffset: pos.start, endOffset: pos.end, text: "Tomorrow", value: date))
             }
         }
 
         // "next week"
         if let range = lowercased.range(of: "next week") {
             if let date = calendar.date(byAdding: .day, value: 7, to: today) {
-                dateCandidates.append(Candidate(position: position(of: range), range: range, text: "Next Week", value: date))
+                let pos = offsets(of: range)
+                dateCandidates.append(Candidate(startOffset: pos.start, endOffset: pos.end, text: "Next Week", value: date))
             }
         }
 
@@ -100,7 +107,8 @@ class SmartTextParser {
                 let formatter = DateFormatter()
                 formatter.dateFormat = "EEE, MMM d"
                 if let date = calendar.date(byAdding: .day, value: daysToAdd, to: today) {
-                    dateCandidates.append(Candidate(position: position(of: range), range: range, text: formatter.string(from: date), value: date))
+                    let pos = offsets(of: range)
+                    dateCandidates.append(Candidate(startOffset: pos.start, endOffset: pos.end, text: formatter.string(from: date), value: date))
                 }
             }
         }
@@ -115,7 +123,8 @@ class SmartTextParser {
                 let formatter = DateFormatter()
                 formatter.dateFormat = "EEE, MMM d"
                 if let date = calendar.date(byAdding: .day, value: daysToAdd, to: today) {
-                    dateCandidates.append(Candidate(position: position(of: range), range: range, text: formatter.string(from: date), value: date))
+                    let pos = offsets(of: range)
+                    dateCandidates.append(Candidate(startOffset: pos.start, endOffset: pos.end, text: formatter.string(from: date), value: date))
                 }
             }
         }
@@ -132,7 +141,8 @@ class SmartTextParser {
                     let formatter = DateFormatter()
                     formatter.dateFormat = "EEE, MMM d"
                     if let date = calendar.date(byAdding: .day, value: daysToAdd, to: today) {
-                        dateCandidates.append(Candidate(position: position(of: range), range: range, text: formatter.string(from: date), value: date))
+                        let pos = offsets(of: range)
+                        dateCandidates.append(Candidate(startOffset: pos.start, endOffset: pos.end, text: formatter.string(from: date), value: date))
                     }
                 }
             }
@@ -155,7 +165,8 @@ class SmartTextParser {
                 if let date = calendar.date(from: components) {
                     let formatter = DateFormatter()
                     formatter.dateFormat = "MMM d"
-                    dateCandidates.append(Candidate(position: position(of: fullRange), range: fullRange, text: formatter.string(from: date), value: date))
+                    let pos = offsets(of: fullRange)
+                    dateCandidates.append(Candidate(startOffset: pos.start, endOffset: pos.end, text: formatter.string(from: date), value: date))
                 }
             }
         }
@@ -177,7 +188,8 @@ class SmartTextParser {
                 if let date = calendar.date(from: components) {
                     let formatter = DateFormatter()
                     formatter.dateFormat = "MMM d"
-                    dateCandidates.append(Candidate(position: position(of: fullRange), range: fullRange, text: formatter.string(from: date), value: date))
+                    let pos = offsets(of: fullRange)
+                    dateCandidates.append(Candidate(startOffset: pos.start, endOffset: pos.end, text: formatter.string(from: date), value: date))
                 }
             }
         }
@@ -204,16 +216,17 @@ class SmartTextParser {
                 if let date = calendar.date(from: components) {
                     let formatter = DateFormatter()
                     formatter.dateFormat = "MMM d"
-                    dateCandidates.append(Candidate(position: position(of: fullRange), range: fullRange, text: formatter.string(from: date), value: date))
+                    let pos = offsets(of: fullRange)
+                    dateCandidates.append(Candidate(startOffset: pos.start, endOffset: pos.end, text: formatter.string(from: date), value: date))
                 }
             }
         }
 
         // Select earliest date candidate
-        if let earliest = dateCandidates.min(by: { $0.position < $1.position }) {
+        if let earliest = dateCandidates.min(by: { $0.startOffset < $1.startOffset }) {
             result.dateText = earliest.text
             result.dateValue = earliest.value as? Date
-            result.allDetectedRanges.append((earliest.range, .date))
+            result.allDetectedRanges.append((earliest.startOffset, earliest.endOffset, .date))
         }
 
         // MARK: - Collect ALL Time Candidates
@@ -250,15 +263,16 @@ class SmartTextParser {
                 let ampm = hour >= 12 ? "pm" : "am"
                 let timeText = minute > 0 ? "\(displayHour):\(String(format: "%02d", minute))\(ampm)" : "\(displayHour)\(ampm)"
 
-                timeCandidates.append(Candidate(position: position(of: fullRange), range: fullRange, text: timeText, value: DateComponents(hour: hour, minute: minute)))
+                let pos = offsets(of: fullRange)
+                timeCandidates.append(Candidate(startOffset: pos.start, endOffset: pos.end, text: timeText, value: DateComponents(hour: hour, minute: minute)))
             }
         }
 
         // Select earliest time candidate
-        if let earliest = timeCandidates.min(by: { $0.position < $1.position }) {
+        if let earliest = timeCandidates.min(by: { $0.startOffset < $1.startOffset }) {
             result.timeText = earliest.text
             result.timeValue = earliest.value as? DateComponents
-            result.allDetectedRanges.append((earliest.range, .time))
+            result.allDetectedRanges.append((earliest.startOffset, earliest.endOffset, .time))
         }
 
         // MARK: - Collect ALL Duration Candidates
@@ -278,15 +292,16 @@ class SmartTextParser {
                 let value = Int(lowercased[valueRange]) ?? 0
                 let minutes = isHours ? value * 60 : value
                 let text = isHours ? (value == 1 ? "1 hour" : "\(value) hours") : "\(value) min"
-                durationCandidates.append(Candidate(position: position(of: fullRange), range: fullRange, text: text, value: minutes))
+                let pos = offsets(of: fullRange)
+                durationCandidates.append(Candidate(startOffset: pos.start, endOffset: pos.end, text: text, value: minutes))
             }
         }
 
         // Select earliest duration candidate
-        if let earliest = durationCandidates.min(by: { $0.position < $1.position }) {
+        if let earliest = durationCandidates.min(by: { $0.startOffset < $1.startOffset }) {
             result.timeBlockText = earliest.text
             result.timeBlockDuration = earliest.value as? Int
-            result.allDetectedRanges.append((earliest.range, .timeBlock))
+            result.allDetectedRanges.append((earliest.startOffset, earliest.endOffset, .timeBlock))
         }
 
         // MARK: - Collect ALL Priority Candidates
@@ -305,17 +320,18 @@ class SmartTextParser {
             ]
             for pattern in patterns {
                 if let range = lowercased.range(of: pattern, options: .regularExpression) {
-                    priorityCandidates.append(Candidate(position: position(of: range), range: range, text: priority.name, value: priority))
+                    let pos = offsets(of: range)
+                    priorityCandidates.append(Candidate(startOffset: pos.start, endOffset: pos.end, text: priority.name, value: priority))
                     break
                 }
             }
         }
 
         // Select earliest priority candidate
-        if let earliest = priorityCandidates.min(by: { $0.position < $1.position }) {
+        if let earliest = priorityCandidates.min(by: { $0.startOffset < $1.startOffset }) {
             result.priorityText = earliest.text
             result.priorityValue = earliest.value as? Priority
-            result.allDetectedRanges.append((earliest.range, .priority))
+            result.allDetectedRanges.append((earliest.startOffset, earliest.endOffset, .priority))
         }
 
         return result
@@ -324,14 +340,17 @@ class SmartTextParser {
     static func cleanTaskName(_ text: String, detected: DetectedComponents) -> String {
         var cleaned = text
 
-        // Sort ranges by start index in reverse order to remove from end first
-        let sortedRanges = detected.allDetectedRanges.sorted {
-            text.distance(from: text.startIndex, to: $0.range.lowerBound) >
-            text.distance(from: text.startIndex, to: $1.range.lowerBound)
-        }
+        // Sort ranges by start offset in reverse order to remove from end first
+        let sortedRanges = detected.allDetectedRanges.sorted { $0.startOffset > $1.startOffset }
 
-        for (range, _) in sortedRanges {
-            cleaned.removeSubrange(range)
+        for (startOffset, endOffset, _) in sortedRanges {
+            // Convert offsets to indices
+            guard let startIndex = text.index(text.startIndex, offsetBy: startOffset, limitedBy: text.endIndex),
+                  let endIndex = text.index(text.startIndex, offsetBy: endOffset, limitedBy: text.endIndex),
+                  startIndex < endIndex else {
+                continue
+            }
+            cleaned.removeSubrange(startIndex..<endIndex)
         }
 
         // Clean up extra whitespace
@@ -419,31 +438,45 @@ struct AddTaskSheet: View {
                             .font(Typography.labelMedium)
                             .foregroundColor(.textSecondary)
 
-                        // Input field
-                        TextField("", text: $taskName, axis: .vertical)
-                            .font(Typography.bodyLarge)
-                            .foregroundColor(.textPrimary)
-                            .focused($isNameFocused)
-                            .lineLimit(3)
-                            .placeholder(when: taskName.isEmpty) {
+                        // Input field with inline highlighting
+                        ZStack(alignment: .topLeading) {
+                            // Highlighted text layer using AttributedString (behind)
+                            if !taskName.isEmpty {
+                                Text(buildAttributedString())
+                                    .padding(Spacing.base)
+                            }
+
+                            // Editable TextField (on top, transparent text when highlights exist)
+                            TextField("", text: $taskName, axis: .vertical)
+                                .font(Typography.bodyLarge)
+                                .foregroundColor(detectedComponents.allDetectedRanges.isEmpty ? .textPrimary : .clear)
+                                .focused($isNameFocused)
+                                .lineLimit(3)
+                                .padding(Spacing.base)
+                                .tint(.accentPrimary)
+
+                            // Placeholder
+                            if taskName.isEmpty {
                                 Text("e.g. Meeting tomorrow 2pm")
                                     .font(Typography.bodyLarge)
                                     .foregroundColor(.textMuted)
+                                    .padding(Spacing.base)
+                                    .allowsHitTesting(false)
                             }
-                            .padding(Spacing.base)
-                            .background(
-                                RoundedRectangle(cornerRadius: CornerRadius.md)
-                                    .fill(Color.surfacePrimary)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: CornerRadius.md)
-                                            .stroke(isNameFocused ? Color.accentPrimary : Color.surfaceBorder, lineWidth: 1)
-                                    )
-                            )
-                            .onChange(of: taskName) {
-                                withAnimation(.easeOut(duration: 0.15)) {
-                                    detectedComponents = SmartTextParser.parse(taskName, priorities: priorityStore.priorities)
-                                }
+                        }
+                        .background(
+                            RoundedRectangle(cornerRadius: CornerRadius.md)
+                                .fill(Color.surfacePrimary)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: CornerRadius.md)
+                                        .stroke(isNameFocused ? Color.accentPrimary : Color.surfaceBorder, lineWidth: 1)
+                                )
+                        )
+                        .onChange(of: taskName) {
+                            withAnimation(.easeOut(duration: 0.15)) {
+                                detectedComponents = SmartTextParser.parse(taskName, priorities: priorityStore.priorities)
                             }
+                        }
                     }
 
                     // Detection chips
@@ -597,6 +630,35 @@ struct AddTaskSheet: View {
                 isNameFocused = true
             }
         }
+    }
+
+    // MARK: - Build Attributed String for Highlighting
+    private func buildAttributedString() -> AttributedString {
+        var attributedString = AttributedString(taskName)
+
+        // Apply default styling
+        attributedString.font = Typography.bodyLarge
+        attributedString.foregroundColor = .textPrimary
+
+        // Process each detected range (now uses integer offsets)
+        for (startOffset, endOffset, type) in detectedComponents.allDetectedRanges {
+            // Convert to indices in the original taskName
+            guard let startIndex = taskName.index(taskName.startIndex, offsetBy: startOffset, limitedBy: taskName.endIndex),
+                  let endIndex = taskName.index(taskName.startIndex, offsetBy: endOffset, limitedBy: taskName.endIndex),
+                  startIndex < endIndex else {
+                continue
+            }
+
+            // Convert String range to AttributedString range
+            let stringRange = startIndex..<endIndex
+            if let attrStart = AttributedString.Index(stringRange.lowerBound, within: attributedString),
+               let attrEnd = AttributedString.Index(stringRange.upperBound, within: attributedString) {
+                attributedString[attrStart..<attrEnd].foregroundColor = .white
+                attributedString[attrStart..<attrEnd].backgroundColor = type.color
+            }
+        }
+
+        return attributedString
     }
 
     // MARK: - Add Task
@@ -1004,6 +1066,9 @@ struct DurationOptionCell: View {
             .onTapGesture(perform: onTap)
     }
 }
+
+// MARK: - Highlighted Text View (kept for reference but not currently used)
+// The AttributedString approach is now used directly in AddTaskSheet
 
 #Preview {
     AddTaskSheet(taskStore: TaskStore(), priorityStore: OnboardingState())
