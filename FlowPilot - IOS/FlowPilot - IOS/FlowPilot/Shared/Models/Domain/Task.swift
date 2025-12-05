@@ -6,6 +6,7 @@ struct FlowTask: Identifiable, Equatable {
     var name: String
     var dueDate: Date?
     var priority: Priority?
+    var timeBlockId: UUID?
     var isCompleted: Bool
     var completedAt: Date?
     var createdAt: Date
@@ -15,6 +16,7 @@ struct FlowTask: Identifiable, Equatable {
         name: String,
         dueDate: Date? = nil,
         priority: Priority? = nil,
+        timeBlockId: UUID? = nil,
         isCompleted: Bool = false,
         completedAt: Date? = nil,
         createdAt: Date = Date()
@@ -23,6 +25,7 @@ struct FlowTask: Identifiable, Equatable {
         self.name = name
         self.dueDate = dueDate
         self.priority = priority
+        self.timeBlockId = timeBlockId
         self.isCompleted = isCompleted
         self.completedAt = completedAt
         self.createdAt = createdAt

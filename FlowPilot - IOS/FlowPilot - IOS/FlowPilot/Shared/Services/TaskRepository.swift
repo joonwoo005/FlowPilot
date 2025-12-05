@@ -123,6 +123,10 @@ class TaskRepository {
             ]
         }
 
+        if let timeBlockId = task.timeBlockId {
+            data["timeBlockId"] = timeBlockId.uuidString
+        }
+
         return data
     }
 
@@ -148,11 +152,17 @@ class TaskRepository {
             priority = Priority(id: priorityId, name: priorityName, color: Color.fromHex(colorHex), hoursPerWeek: 0)
         }
 
+        var timeBlockId: UUID?
+        if let timeBlockIdString = data["timeBlockId"] as? String {
+            timeBlockId = UUID(uuidString: timeBlockIdString)
+        }
+
         return FlowTask(
             id: id,
             name: name,
             dueDate: dueDate,
             priority: priority,
+            timeBlockId: timeBlockId,
             isCompleted: isCompleted,
             completedAt: completedAt,
             createdAt: createdAt

@@ -365,7 +365,15 @@ class SmartTextParser {
 struct AddTaskSheet: View {
     @ObservedObject var taskStore: TaskStore
     @ObservedObject var priorityStore: OnboardingState
+    @ObservedObject var timeBlockStore: TimeBlockStore
+    var lockedBlock: TimeBlock? = nil
+    var editingTask: FlowTask? = nil
+    var contextDate: Date? = nil  // The day section date (if adding from a specific day)
     @Environment(\.dismiss) private var dismiss
+
+    private var isEditMode: Bool {
+        editingTask != nil
+    }
 
     @State private var taskName = ""
     @State private var detectedComponents = DetectedComponents()
@@ -374,13 +382,33 @@ struct AddTaskSheet: View {
     @State private var manualDate: Date? = nil
     @State private var manualTime: DateComponents? = nil
     @State private var manualPriority: Priority? = nil
-    @State private var manualTimeBlock: Int? = nil
+    @State private var selectedBlock: TimeBlock? = nil  // Selected time block
+
+    // Computed property to check if values are locked from a block (either lockedBlock or selectedBlock)
+    private var hasLockedBlock: Bool {
+        lockedBlock != nil || selectedBlock != nil
+    }
+
+    // Check if block is user-selected (can be cleared) vs locked from context (cannot be cleared)
+    private var isBlockUserSelected: Bool {
+        selectedBlock != nil && lockedBlock == nil
+    }
+
+    private var activeBlock: TimeBlock? {
+        lockedBlock ?? selectedBlock
+    }
+
+    private var lockedPriority: Priority? {
+        guard let block = activeBlock else { return nil }
+        return priorityStore.priorities.first { $0.id == block.priorityId }
+    }
 
     // Sheet states
     @State private var showDatePicker = false
     @State private var showTimePicker = false
     @State private var showPriorityPicker = false
     @State private var showTimeBlockPicker = false
+    @State private var showAddBlockSheet = false
 
     // Animation states for chip highlights
     @State private var dateJustDetected = false
@@ -401,6 +429,13 @@ struct AddTaskSheet: View {
 
     // Computed display values
     private var displayDate: (text: String?, value: Date?) {
+        // Active block (locked or selected) takes priority
+        if let block = activeBlock {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "EEE, MMM d"
+            let date = Calendar.current.startOfDay(for: block.startTime)
+            return (formatter.string(from: date), date)
+        }
         if let manual = manualDate {
             let formatter = DateFormatter()
             formatter.dateFormat = "EEE, MMM d"
@@ -410,6 +445,16 @@ struct AddTaskSheet: View {
     }
 
     private var displayTime: (text: String?, value: DateComponents?) {
+        // Active block (locked or selected) takes priority
+        if let block = activeBlock {
+            let calendar = Calendar.current
+            let hour = calendar.component(.hour, from: block.startTime)
+            let minute = calendar.component(.minute, from: block.startTime)
+            let displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour)
+            let ampm = hour >= 12 ? "pm" : "am"
+            let text = minute > 0 ? "\(displayHour):\(String(format: "%02d", minute))\(ampm)" : "\(displayHour)\(ampm)"
+            return (text, DateComponents(hour: hour, minute: minute))
+        }
         if let manual = manualTime {
             let hour = manual.hour ?? 0
             let minute = manual.minute ?? 0
@@ -422,22 +467,313 @@ struct AddTaskSheet: View {
     }
 
     private var displayPriority: (text: String?, value: Priority?) {
+        // Active block's priority takes priority
+        if let priority = lockedPriority {
+            return (priority.name, priority)
+        }
         if let manual = manualPriority {
             return (manual.name, manual)
         }
         return (detectedComponents.priorityText, detectedComponents.priorityValue)
     }
 
-    private var displayTimeBlock: (text: String?, value: Int?) {
-        if let manual = manualTimeBlock {
-            if manual >= 60 {
-                let hours = manual / 60
-                return (hours == 1 ? "1 hour" : "\(hours) hours", manual)
-            } else {
-                return ("\(manual) min", manual)
+    // Display for Block chip - shows block name and time range when selected
+    private var displayBlock: (text: String?, block: TimeBlock?) {
+        if let block = activeBlock {
+            return ("\(block.priorityName) • \(block.formattedTimeRange)", block)
+        }
+        return (nil, nil)
+    }
+
+    // MARK: - Block Context Banner
+    @ViewBuilder
+    private var blockContextBanner: some View {
+        if let block = lockedBlock {
+            HStack(spacing: Spacing.sm) {
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(block.priorityColor)
+                    .frame(width: 3, height: 24)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Adding to \(block.priorityName)")
+                        .font(Typography.labelMedium)
+                        .fontWeight(.medium)
+                        .foregroundColor(.textPrimary)
+
+                    Text(block.formattedTimeRange)
+                        .font(Typography.labelSmall)
+                        .foregroundColor(.textMuted)
+                }
+
+                Spacer()
+
+                Image(systemName: "link")
+                    .font(.system(size: 12))
+                    .foregroundColor(block.priorityColor)
+            }
+            .padding(Spacing.sm)
+            .background(
+                RoundedRectangle(cornerRadius: CornerRadius.md)
+                    .fill(block.priorityColor.opacity(0.1))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: CornerRadius.md)
+                            .stroke(block.priorityColor.opacity(0.2), lineWidth: 1)
+                    )
+            )
+        }
+    }
+
+    // MARK: - Task Name Input Section
+    private var taskNameInputSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            Text("What do you need to do?")
+                .font(Typography.labelMedium)
+                .foregroundColor(.textSecondary)
+
+            // Input field with inline highlighting
+            ZStack(alignment: .topLeading) {
+                // Highlighted text layer with rounded pill backgrounds
+                if !taskName.isEmpty && !detectedComponents.allDetectedRanges.isEmpty {
+                    HighlightedTextView(
+                        text: taskName,
+                        detectedRanges: detectedComponents.allDetectedRanges
+                    )
+                    .padding(Spacing.base)
+                }
+
+                // Editable TextField (on top, transparent text when highlights exist)
+                TextField("", text: $taskName, axis: .vertical)
+                    .font(Typography.bodyLarge)
+                    .foregroundColor(detectedComponents.allDetectedRanges.isEmpty ? .textPrimary : .clear)
+                    .focused($isNameFocused)
+                    .lineLimit(3)
+                    .padding(Spacing.base)
+                    .tint(.accentPrimary)
+
+                // Placeholder
+                if taskName.isEmpty {
+                    Text("e.g. Meeting tomorrow 2pm")
+                        .font(Typography.bodyLarge)
+                        .foregroundColor(.textMuted)
+                        .padding(Spacing.base)
+                        .allowsHitTesting(false)
+                }
+            }
+            .background(
+                RoundedRectangle(cornerRadius: CornerRadius.md)
+                    .fill(Color.surfacePrimary)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: CornerRadius.md)
+                            .stroke(isNameFocused ? Color.accentPrimary : Color.surfaceBorder, lineWidth: 1)
+                    )
+            )
+            .onChange(of: taskName) {
+                handleTaskNameChange()
             }
         }
-        return (detectedComponents.timeBlockText, detectedComponents.timeBlockDuration)
+    }
+
+    // MARK: - Task Name Change Handler
+    private func handleTaskNameChange() {
+        // Capture previous detection count
+        let previousCount = detectedComponents.allDetectedRanges.count
+        let previousRanges = detectedComponents.allDetectedRanges
+
+        let newDetections = SmartTextParser.parse(taskName, priorities: priorityStore.priorities)
+
+        withAnimation(.easeOut(duration: 0.15)) {
+            detectedComponents = newDetections
+        }
+
+        // Auto-insert spaces when a new detection is made
+        let newCount = newDetections.allDetectedRanges.count
+        if newCount > previousCount && !taskName.hasSuffix("  ") {
+            DispatchQueue.main.async {
+                if !taskName.hasSuffix("  ") {
+                    taskName.append("  ")
+                }
+            }
+        }
+
+        // Hide error if user adds actual task description
+        let cleaned = SmartTextParser.cleanTaskName(taskName, detected: newDetections)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if !cleaned.isEmpty && showNoDescriptionError {
+            withAnimation(.easeOut(duration: 0.15)) {
+                showNoDescriptionError = false
+            }
+        }
+
+        // Check for newly detected components and trigger highlights
+        let hadDate = previousCount > 0 && previousRanges.contains { $0.type == .date }
+        let hadTime = previousCount > 0 && previousRanges.contains { $0.type == .time }
+        let hadPriority = previousCount > 0 && previousRanges.contains { $0.type == .priority }
+        let hadTimeBlock = previousCount > 0 && previousRanges.contains { $0.type == .timeBlock }
+
+        if !hadDate && detectedComponents.dateText != nil {
+            dateJustDetected = true
+            Task {
+                try? await Task.sleep(nanoseconds: 600_000_000)
+                await MainActor.run { dateJustDetected = false }
+            }
+        }
+        if !hadTime && detectedComponents.timeText != nil {
+            timeJustDetected = true
+            Task {
+                try? await Task.sleep(nanoseconds: 600_000_000)
+                await MainActor.run { timeJustDetected = false }
+            }
+        }
+        if !hadPriority && detectedComponents.priorityText != nil {
+            priorityJustDetected = true
+            Task {
+                try? await Task.sleep(nanoseconds: 600_000_000)
+                await MainActor.run { priorityJustDetected = false }
+            }
+        }
+        if !hadTimeBlock && detectedComponents.timeBlockText != nil {
+            timeBlockJustDetected = true
+            Task {
+                try? await Task.sleep(nanoseconds: 600_000_000)
+                await MainActor.run { timeBlockJustDetected = false }
+            }
+        }
+    }
+
+    // MARK: - Detection Chips Section
+    private var detectionChipsSection: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: Spacing.sm) {
+                // Date chip
+                DetectionChip(
+                    icon: "calendar",
+                    label: displayDate.text ?? "Date",
+                    isActive: displayDate.text != nil,
+                    color: .dueDateToday,
+                    onTap: { showDatePicker = true },
+                    onClear: displayDate.text != nil ? { clearDateChip() } : nil,
+                    isHighlighted: dateJustDetected,
+                    isLocked: hasLockedBlock
+                )
+
+                // Time chip
+                DetectionChip(
+                    icon: "clock.fill",
+                    label: displayTime.text ?? "Time",
+                    isActive: displayTime.text != nil,
+                    color: .accentWarm,
+                    onTap: { showTimePicker = true },
+                    onClear: displayTime.text != nil ? { clearTimeChip() } : nil,
+                    isHighlighted: timeJustDetected,
+                    isLocked: hasLockedBlock
+                )
+
+                // Time Block chip
+                DetectionChip(
+                    icon: activeBlock != nil ? "rectangle.stack" : "calendar.badge.clock",
+                    label: displayBlock.text ?? "Block",
+                    isActive: displayBlock.block != nil,
+                    color: activeBlock?.priorityColor ?? .accentPrimary,
+                    onTap: { showTimeBlockPicker = true },
+                    onClear: isBlockUserSelected ? { clearBlockSelection() } : nil,
+                    isHighlighted: timeBlockJustDetected,
+                    isLocked: lockedBlock != nil  // Only locked if from context, not user-selected
+                )
+
+                // Priority chip
+                DetectionChip(
+                    icon: "flag.fill",
+                    label: displayPriority.text ?? "Priority",
+                    isActive: displayPriority.text != nil,
+                    color: lockedPriority?.color ?? .priorityPurple,
+                    onTap: { showPriorityPicker = true },
+                    onClear: displayPriority.text != nil ? { clearPriorityChip() } : nil,
+                    isHighlighted: priorityJustDetected,
+                    isLocked: hasLockedBlock
+                )
+            }
+        }
+    }
+
+    // MARK: - Chip Clear Handlers
+    private func clearDateChip() {
+        manualDate = nil
+        if detectedComponents.dateText != nil {
+            taskName = SmartTextParser.cleanTaskName(taskName, detected: DetectedComponents(
+                dateText: detectedComponents.dateText,
+                dateValue: detectedComponents.dateValue,
+                allDetectedRanges: detectedComponents.allDetectedRanges.filter { $0.type == .date }
+            ))
+            detectedComponents = SmartTextParser.parse(taskName, priorities: priorityStore.priorities)
+        }
+    }
+
+    private func clearTimeChip() {
+        manualTime = nil
+        if detectedComponents.timeText != nil {
+            taskName = SmartTextParser.cleanTaskName(taskName, detected: DetectedComponents(
+                timeText: detectedComponents.timeText,
+                timeValue: detectedComponents.timeValue,
+                allDetectedRanges: detectedComponents.allDetectedRanges.filter { $0.type == .time }
+            ))
+            detectedComponents = SmartTextParser.parse(taskName, priorities: priorityStore.priorities)
+        }
+    }
+
+    private func clearBlockSelection() {
+        // Clear the selected block and all auto-populated values
+        selectedBlock = nil
+        manualDate = nil
+        manualTime = nil
+        manualPriority = nil
+    }
+
+    private func clearPriorityChip() {
+        manualPriority = nil
+        if detectedComponents.priorityText != nil {
+            taskName = SmartTextParser.cleanTaskName(taskName, detected: DetectedComponents(
+                priorityText: detectedComponents.priorityText,
+                priorityValue: detectedComponents.priorityValue,
+                allDetectedRanges: detectedComponents.allDetectedRanges.filter { $0.type == .priority }
+            ))
+            detectedComponents = SmartTextParser.parse(taskName, priorities: priorityStore.priorities)
+        }
+    }
+
+    // MARK: - Bottom Action Section
+    @ViewBuilder
+    private var bottomActionSection: some View {
+        VStack(spacing: 0) {
+            // Error message
+            if showNoDescriptionError {
+                errorMessageView
+            }
+
+            // Add/Save button
+            addTaskButton
+        }
+    }
+
+    private var errorMessageView: some View {
+        HStack(spacing: Spacing.xs) {
+            Image(systemName: "exclamationmark.circle.fill")
+                .font(.system(size: 14))
+            Text("Please add a task description")
+                .font(Typography.bodySmall)
+        }
+        .foregroundColor(.dueDateOverdue)
+        .padding(.bottom, Spacing.sm)
+    }
+
+    private var addTaskButton: some View {
+        let buttonTitle = isEditMode ? "Save Changes" : "Add Task"
+        let buttonAction = isEditMode ? saveTask : addTask
+        let isEnabled = !taskName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        return PrimaryButton(
+            title: buttonTitle,
+            action: buttonAction,
+            isEnabled: isEnabled
+        )
     }
 
     var body: some View {
@@ -447,250 +783,38 @@ struct AddTaskSheet: View {
                     .ignoresSafeArea()
 
                 VStack(spacing: Spacing.lg) {
+                    // Block context banner when adding to a specific block
+                    blockContextBanner
+
                     // Task name input with highlighting
-                    VStack(alignment: .leading, spacing: Spacing.sm) {
-                        Text("What do you need to do?")
-                            .font(Typography.labelMedium)
-                            .foregroundColor(.textSecondary)
-
-                        // Input field with inline highlighting
-                        ZStack(alignment: .topLeading) {
-                            // Highlighted text layer with rounded pill backgrounds
-                            if !taskName.isEmpty && !detectedComponents.allDetectedRanges.isEmpty {
-                                HighlightedTextView(
-                                    text: taskName,
-                                    detectedRanges: detectedComponents.allDetectedRanges
-                                )
-                                .padding(Spacing.base)
-                            }
-
-                            // Editable TextField (on top, transparent text when highlights exist)
-                            TextField("", text: $taskName, axis: .vertical)
-                                .font(Typography.bodyLarge)
-                                .foregroundColor(detectedComponents.allDetectedRanges.isEmpty ? .textPrimary : .clear)
-                                .focused($isNameFocused)
-                                .lineLimit(3)
-                                .padding(Spacing.base)
-                                .tint(.accentPrimary)
-
-                            // Placeholder
-                            if taskName.isEmpty {
-                                Text("e.g. Meeting tomorrow 2pm")
-                                    .font(Typography.bodyLarge)
-                                    .foregroundColor(.textMuted)
-                                    .padding(Spacing.base)
-                                    .allowsHitTesting(false)
-                            }
-                        }
-                        .background(
-                            RoundedRectangle(cornerRadius: CornerRadius.md)
-                                .fill(Color.surfacePrimary)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: CornerRadius.md)
-                                        .stroke(isNameFocused ? Color.accentPrimary : Color.surfaceBorder, lineWidth: 1)
-                                )
-                        )
-                        .onChange(of: taskName) {
-                            // Capture previous detection count
-                            let previousCount = detectedComponents.allDetectedRanges.count
-
-                            let newDetections = SmartTextParser.parse(taskName, priorities: priorityStore.priorities)
-
-                            withAnimation(.easeOut(duration: 0.15)) {
-                                detectedComponents = newDetections
-                            }
-
-                            // Auto-insert spaces when a new detection is made
-                            let newCount = newDetections.allDetectedRanges.count
-                            if newCount > previousCount && !taskName.hasSuffix("  ") {
-                                // Defer the modification to avoid state conflicts
-                                DispatchQueue.main.async {
-                                    if !taskName.hasSuffix("  ") {
-                                        taskName.append("  ")
-                                    }
-                                }
-                            }
-
-                            // Hide error if user adds actual task description
-                            let cleaned = SmartTextParser.cleanTaskName(taskName, detected: newDetections)
-                                .trimmingCharacters(in: .whitespacesAndNewlines)
-                            if !cleaned.isEmpty && showNoDescriptionError {
-                                withAnimation(.easeOut(duration: 0.15)) {
-                                    showNoDescriptionError = false
-                                }
-                            }
-
-                            // Check for newly detected components and trigger highlights
-                            let previousRanges = detectedComponents.allDetectedRanges
-                            let hadDate = previousCount > 0 && previousRanges.contains { $0.type == .date }
-                            let hadTime = previousCount > 0 && previousRanges.contains { $0.type == .time }
-                            let hadPriority = previousCount > 0 && previousRanges.contains { $0.type == .priority }
-                            let hadTimeBlock = previousCount > 0 && previousRanges.contains { $0.type == .timeBlock }
-
-                            let nowHasDate = detectedComponents.dateText != nil
-                            let nowHasTime = detectedComponents.timeText != nil
-                            let nowHasPriority = detectedComponents.priorityText != nil
-                            let nowHasTimeBlock = detectedComponents.timeBlockText != nil
-
-                            if !hadDate && nowHasDate {
-                                dateJustDetected = true
-                                Task {
-                                    try? await Task.sleep(nanoseconds: 600_000_000)
-                                    await MainActor.run { dateJustDetected = false }
-                                }
-                            }
-                            if !hadTime && nowHasTime {
-                                timeJustDetected = true
-                                Task {
-                                    try? await Task.sleep(nanoseconds: 600_000_000)
-                                    await MainActor.run { timeJustDetected = false }
-                                }
-                            }
-                            if !hadPriority && nowHasPriority {
-                                priorityJustDetected = true
-                                Task {
-                                    try? await Task.sleep(nanoseconds: 600_000_000)
-                                    await MainActor.run { priorityJustDetected = false }
-                                }
-                            }
-                            if !hadTimeBlock && nowHasTimeBlock {
-                                timeBlockJustDetected = true
-                                Task {
-                                    try? await Task.sleep(nanoseconds: 600_000_000)
-                                    await MainActor.run { timeBlockJustDetected = false }
-                                }
-                            }
-                        }
-                    }
+                    taskNameInputSection
 
                     // Detection chips
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: Spacing.sm) {
-                            // Date chip
-                            DetectionChip(
-                                icon: "calendar",
-                                label: displayDate.text ?? "Date",
-                                isActive: displayDate.text != nil,
-                                color: .dueDateToday,
-                                onTap: { showDatePicker = true },
-                                onClear: displayDate.text != nil ? {
-                                    manualDate = nil
-                                    // Re-parse to clear detected
-                                    if detectedComponents.dateText != nil {
-                                        taskName = SmartTextParser.cleanTaskName(taskName, detected: DetectedComponents(
-                                            dateText: detectedComponents.dateText,
-                                            dateValue: detectedComponents.dateValue,
-                                            allDetectedRanges: detectedComponents.allDetectedRanges.filter { $0.type == .date }
-                                        ))
-                                        detectedComponents = SmartTextParser.parse(taskName, priorities: priorityStore.priorities)
-                                    }
-                                } : nil,
-                                isHighlighted: dateJustDetected
-                            )
-
-                            // Time chip
-                            DetectionChip(
-                                icon: "clock.fill",
-                                label: displayTime.text ?? "Time",
-                                isActive: displayTime.text != nil,
-                                color: .accentWarm,
-                                onTap: { showTimePicker = true },
-                                onClear: displayTime.text != nil ? {
-                                    manualTime = nil
-                                    if detectedComponents.timeText != nil {
-                                        taskName = SmartTextParser.cleanTaskName(taskName, detected: DetectedComponents(
-                                            timeText: detectedComponents.timeText,
-                                            timeValue: detectedComponents.timeValue,
-                                            allDetectedRanges: detectedComponents.allDetectedRanges.filter { $0.type == .time }
-                                        ))
-                                        detectedComponents = SmartTextParser.parse(taskName, priorities: priorityStore.priorities)
-                                    }
-                                } : nil,
-                                isHighlighted: timeJustDetected
-                            )
-
-                            // Time Block chip
-                            DetectionChip(
-                                icon: "timer",
-                                label: displayTimeBlock.text ?? "Block",
-                                isActive: displayTimeBlock.text != nil,
-                                color: Color(red: 0.6, green: 0.25, blue: 0.25),
-                                onTap: { showTimeBlockPicker = true },
-                                onClear: displayTimeBlock.text != nil ? {
-                                    manualTimeBlock = nil
-                                    if detectedComponents.timeBlockText != nil {
-                                        taskName = SmartTextParser.cleanTaskName(taskName, detected: DetectedComponents(
-                                            timeBlockText: detectedComponents.timeBlockText,
-                                            timeBlockDuration: detectedComponents.timeBlockDuration,
-                                            allDetectedRanges: detectedComponents.allDetectedRanges.filter { $0.type == .timeBlock }
-                                        ))
-                                        detectedComponents = SmartTextParser.parse(taskName, priorities: priorityStore.priorities)
-                                    }
-                                } : nil,
-                                isHighlighted: timeBlockJustDetected
-                            )
-
-                            // Priority chip
-                            DetectionChip(
-                                icon: "flag.fill",
-                                label: displayPriority.text ?? "Priority",
-                                isActive: displayPriority.text != nil,
-                                color: .priorityPurple,
-                                onTap: { showPriorityPicker = true },
-                                onClear: displayPriority.text != nil ? {
-                                    manualPriority = nil
-                                    if detectedComponents.priorityText != nil {
-                                        taskName = SmartTextParser.cleanTaskName(taskName, detected: DetectedComponents(
-                                            priorityText: detectedComponents.priorityText,
-                                            priorityValue: detectedComponents.priorityValue,
-                                            allDetectedRanges: detectedComponents.allDetectedRanges.filter { $0.type == .priority }
-                                        ))
-                                        detectedComponents = SmartTextParser.parse(taskName, priorities: priorityStore.priorities)
-                                    }
-                                } : nil,
-                                isHighlighted: priorityJustDetected
-                            )
-                        }
-                    }
+                    detectionChipsSection
 
                     Spacer()
 
-                    // Error message
-                    if showNoDescriptionError {
-                        HStack(spacing: Spacing.xs) {
-                            Image(systemName: "exclamationmark.circle.fill")
-                                .font(.system(size: 14))
-                            Text("Please add a task description")
-                                .font(Typography.bodySmall)
-                        }
-                        .foregroundColor(.dueDateOverdue)
-                        .padding(.bottom, Spacing.sm)
-                    }
-
-                    // Add button
-                    PrimaryButton(
-                        title: "Add Task",
-                        action: addTask,
-                        isEnabled: !taskName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                    )
+                    // Bottom section (error + button)
+                    bottomActionSection
                 }
                 .padding(.horizontal, Spacing.xl)
                 .padding(.top, Spacing.lg)
                 .padding(.bottom, Spacing.xxl)
             }
-            .navigationTitle("New Task")
+            .navigationTitle(isEditMode ? "Edit Task" : "New Task")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
+            .toolbar(content: {
                 ToolbarItem(placement: .topBarLeading) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.textSecondary)
-                        .onTapGesture {
-                            Haptics.impact(.light)
-                            dismiss()
-                        }
+                    Button(action: {
+                        Haptics.impact(.light)
+                        dismiss()
+                    }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.textSecondary)
+                    }
                 }
-            }
+            })
             .sheet(isPresented: $showDatePicker) {
                 DatePickerSheet(selectedDate: Binding(
                     get: { manualDate ?? detectedComponents.dateValue },
@@ -719,15 +843,63 @@ struct AddTaskSheet: View {
                 .presentationDragIndicator(.visible)
             }
             .sheet(isPresented: $showTimeBlockPicker) {
-                TimeBlockPickerSheet(selectedDuration: Binding(
-                    get: { manualTimeBlock ?? detectedComponents.timeBlockDuration },
-                    set: { manualTimeBlock = $0 }
-                ))
-                .presentationDetents([.height(350)])
+                TimeBlockPickerSheet(
+                    timeBlockStore: timeBlockStore,
+                    selectedBlock: $selectedBlock,
+                    contextDate: contextDate,
+                    onCreateBlock: { showAddBlockSheet = true }
+                )
+                .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
             }
             .onAppear {
                 isNameFocused = true
+
+                // Pre-fill data when editing an existing task
+                if let task = editingTask {
+                    taskName = task.name
+
+                    // Pre-fill date
+                    if let dueDate = task.dueDate {
+                        let calendar = Calendar.current
+                        manualDate = calendar.startOfDay(for: dueDate)
+
+                        // Pre-fill time if dueDate has time component
+                        let hour = calendar.component(.hour, from: dueDate)
+                        let minute = calendar.component(.minute, from: dueDate)
+                        if hour != 0 || minute != 0 {
+                            manualTime = DateComponents(hour: hour, minute: minute)
+                        }
+                    }
+
+                    // Pre-fill priority
+                    manualPriority = task.priority
+
+                    // Pre-fill block if task has one
+                    if let blockId = task.timeBlockId {
+                        selectedBlock = timeBlockStore.timeBlocks.first { $0.id == blockId }
+                    }
+                }
+            }
+            .onChange(of: selectedBlock) { _, newBlock in
+                // Auto-populate date/time/priority when a block is selected
+                if let block = newBlock {
+                    let calendar = Calendar.current
+                    manualDate = calendar.startOfDay(for: block.startTime)
+                    let hour = calendar.component(.hour, from: block.startTime)
+                    let minute = calendar.component(.minute, from: block.startTime)
+                    manualTime = DateComponents(hour: hour, minute: minute)
+                    manualPriority = priorityStore.priorities.first { $0.id == block.priorityId }
+                }
+            }
+            .sheet(isPresented: $showAddBlockSheet) {
+                AddTimeBlockSheet(
+                    priorityStore: priorityStore,
+                    timeBlockStore: timeBlockStore,
+                    targetDate: contextDate ?? Date()
+                )
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
             }
         }
     }
@@ -791,10 +963,52 @@ struct AddTaskSheet: View {
         taskStore.addTask(
             name: cleanedName,
             dueDate: finalDate,
-            priority: displayPriority.value
+            priority: displayPriority.value,
+            timeBlockId: activeBlock?.id
         )
 
         Haptics.impact(.medium)
+        dismiss()
+    }
+
+    // MARK: - Save Task (Edit Mode)
+    private func saveTask() {
+        guard let originalTask = editingTask else { return }
+
+        let cleanedName = SmartTextParser.cleanTaskName(taskName, detected: detectedComponents)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Check if there's actual task description
+        guard !cleanedName.isEmpty else {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                showNoDescriptionError = true
+            }
+            Haptics.notification(.warning)
+            return
+        }
+
+        showNoDescriptionError = false
+
+        // Combine date and time
+        var finalDate = displayDate.value
+        if let date = finalDate, let time = displayTime.value {
+            let calendar = Calendar.current
+            var components = calendar.dateComponents([.year, .month, .day], from: date)
+            components.hour = time.hour
+            components.minute = time.minute
+            finalDate = calendar.date(from: components)
+        }
+
+        // Create updated task preserving original properties
+        var updatedTask = originalTask
+        updatedTask.name = cleanedName
+        updatedTask.dueDate = finalDate
+        updatedTask.priority = displayPriority.value
+        updatedTask.timeBlockId = activeBlock?.id
+
+        taskStore.updateTask(updatedTask)
+
+        Haptics.notification(.success)
         dismiss()
     }
 }
@@ -808,6 +1022,7 @@ struct DetectionChip: View {
     let onTap: () -> Void
     let onClear: (() -> Void)?
     var isHighlighted: Bool = false
+    var isLocked: Bool = false
 
     var body: some View {
         HStack(spacing: Spacing.xs) {
@@ -818,7 +1033,12 @@ struct DetectionChip: View {
                 .font(Typography.labelSmall)
                 .fontWeight(.medium)
 
-            if isActive, let onClear = onClear {
+            if isLocked {
+                // Lock icon for locked chips
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundColor(.white.opacity(0.6))
+            } else if isActive, let onClear = onClear {
                 Image(systemName: "xmark")
                     .font(.system(size: 9, weight: .bold))
                     .foregroundColor(color.opacity(0.7))
@@ -847,9 +1067,10 @@ struct DetectionChip: View {
                 .stroke(color, lineWidth: isHighlighted ? 2 : 0)
                 .opacity(isHighlighted ? 1 : 0)
         )
-        .opacity(isHighlighted ? 0.85 : 1.0)
+        .opacity(isLocked ? 0.8 : (isHighlighted ? 0.85 : 1.0))
         .animation(.easeInOut(duration: 0.15).repeatCount(3, autoreverses: true), value: isHighlighted)
         .onTapGesture {
+            guard !isLocked else { return }
             Haptics.impact(.light)
             onTap()
         }
@@ -1094,24 +1315,109 @@ struct PriorityOptionRow: View {
 
 // MARK: - Time Block Picker Sheet
 struct TimeBlockPickerSheet: View {
-    @Binding var selectedDuration: Int?
+    @ObservedObject var timeBlockStore: TimeBlockStore
+    @Binding var selectedBlock: TimeBlock?
+    var contextDate: Date?  // If set, filter to this date only
+    let onCreateBlock: () -> Void
     @Environment(\.dismiss) private var dismiss
 
-    let presets: [(label: String, minutes: Int)] = [
-        ("15 min", 15),
-        ("30 min", 30),
-        ("45 min", 45),
-        ("1 hour", 60),
-        ("1.5 hours", 90),
-        ("2 hours", 120),
-        ("3 hours", 180),
-        ("4 hours", 240)
-    ]
+    // Get available blocks based on context (only current and future blocks)
+    private var availableBlocks: [TimeBlock] {
+        let now = Date()
+
+        if let date = contextDate {
+            // Filter to specific date, excluding past blocks
+            return timeBlockStore.blocks(for: date)
+                .filter { $0.endTime > now }  // Only blocks that haven't ended
+                .sorted { $0.startTime < $1.startTime }
+        } else {
+            // Show all future blocks (blocks that haven't ended yet)
+            return timeBlockStore.timeBlocks
+                .filter { $0.endTime > now }  // Only blocks that haven't ended
+                .sorted { $0.startTime < $1.startTime }
+        }
+    }
+
+    // Group blocks by week, then by day for display
+    private var blocksByWeekAndDay: [(weekLabel: String, days: [(date: Date, blocks: [TimeBlock])])] {
+        let calendar = Calendar.current
+        var grouped: [Date: [TimeBlock]] = [:]
+
+        for block in availableBlocks {
+            let day = calendar.startOfDay(for: block.startTime)
+            grouped[day, default: []].append(block)
+        }
+
+        let sortedDays = grouped.keys.sorted().map { date in
+            (date: date, blocks: grouped[date]!.sorted { $0.startTime < $1.startTime })
+        }
+
+        // Group days by week
+        var weekGroups: [(weekStart: Date, weekLabel: String, days: [(date: Date, blocks: [TimeBlock])])] = []
+
+        for dayGroup in sortedDays {
+            let weekStart = startOfWeek(for: dayGroup.date)
+            let weekLabel = formatWeekLabel(for: dayGroup.date)
+
+            if let lastIndex = weekGroups.lastIndex(where: { $0.weekStart == weekStart }) {
+                weekGroups[lastIndex].days.append(dayGroup)
+            } else {
+                weekGroups.append((weekStart: weekStart, weekLabel: weekLabel, days: [dayGroup]))
+            }
+        }
+
+        return weekGroups.map { (weekLabel: $0.weekLabel, days: $0.days) }
+    }
+
+    /// Get the start of the week (Monday) for a given date
+    private func startOfWeek(for date: Date) -> Date {
+        var calendar = Calendar.current
+        calendar.firstWeekday = 2 // Monday = 2
+        let components = calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: date)
+        return calendar.date(from: components) ?? date
+    }
+
+    private func formatWeekLabel(for date: Date) -> String {
+        let calendar = Calendar.current
+        let todayWeekStart = startOfWeek(for: Date())
+        let targetWeekStart = startOfWeek(for: date)
+
+        let weeksDiff = calendar.dateComponents([.weekOfYear], from: todayWeekStart, to: targetWeekStart).weekOfYear ?? 0
+
+        switch weeksDiff {
+        case 0:
+            return "This Week"
+        case 1:
+            return "Next Week"
+        case -1:
+            return "Last Week"
+        default:
+            // Show the week's date range for other weeks
+            let formatter = DateFormatter()
+            formatter.dateFormat = "MMM d"
+            let weekEnd = calendar.date(byAdding: .day, value: 6, to: targetWeekStart) ?? targetWeekStart
+            return "\(formatter.string(from: targetWeekStart)) - \(formatter.string(from: weekEnd))"
+        }
+    }
+
+    private func formatDayHeader(_ date: Date) -> String {
+        let calendar = Calendar.current
+        if calendar.isDateInToday(date) {
+            return "Today"
+        } else if calendar.isDateInTomorrow(date) {
+            return "Tomorrow"
+        } else {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "EEEE, MMM d"
+            return formatter.string(from: date)
+        }
+    }
 
     var body: some View {
-        VStack(spacing: Spacing.lg) {
+        VStack(spacing: 0) {
+            // Header
             HStack {
-                Text("Time Block Duration")
+                Text("Select Time Block")
                     .font(Typography.headlineSmall)
                     .foregroundColor(.textPrimary)
 
@@ -1126,66 +1432,158 @@ struct TimeBlockPickerSheet: View {
                         dismiss()
                     }
             }
+            .padding(.horizontal, Spacing.xl)
             .padding(.top, Spacing.base)
+            .padding(.bottom, Spacing.md)
 
-            LazyVGrid(columns: [
-                GridItem(.flexible()),
-                GridItem(.flexible()),
-                GridItem(.flexible()),
-                GridItem(.flexible())
-            ], spacing: Spacing.sm) {
-                // None option
-                DurationOptionCell(
-                    label: "None",
-                    isSelected: selectedDuration == nil,
-                    color: .textMuted
-                ) {
-                    selectedDuration = nil
-                    Haptics.impact(.light)
-                }
+            if availableBlocks.isEmpty {
+                // Empty state
+                VStack(spacing: Spacing.lg) {
+                    Spacer()
 
-                ForEach(presets, id: \.minutes) { preset in
-                    DurationOptionCell(
-                        label: preset.label,
-                        isSelected: selectedDuration == preset.minutes,
-                        color: Color(red: 0.6, green: 0.25, blue: 0.25)
-                    ) {
-                        selectedDuration = preset.minutes
-                        Haptics.impact(.light)
+                    Image(systemName: "calendar.badge.plus")
+                        .font(.system(size: 48))
+                        .foregroundColor(.textMuted)
+
+                    Text("No blocks available")
+                        .font(Typography.bodyLarge)
+                        .foregroundColor(.textSecondary)
+
+                    Text(contextDate != nil ? "Create a block for this day" : "Create a block to schedule tasks")
+                        .font(Typography.bodySmall)
+                        .foregroundColor(.textMuted)
+                        .multilineTextAlignment(.center)
+
+                    HStack(spacing: Spacing.xs) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 14, weight: .semibold))
+                        Text("Create Block")
+                            .font(Typography.bodyMedium)
+                            .fontWeight(.medium)
                     }
+                    .foregroundColor(.accentPrimary)
+                    .padding(.horizontal, Spacing.lg)
+                    .padding(.vertical, Spacing.sm)
+                    .background(
+                        Capsule()
+                            .fill(Color.accentPrimary.opacity(0.1))
+                    )
+                    .onTapGesture {
+                        Haptics.impact(.light)
+                        dismiss()
+                        onCreateBlock()
+                    }
+
+                    Spacer()
+                }
+                .padding(.horizontal, Spacing.xl)
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: Spacing.lg) {
+                        // "None" option to clear selection
+                        if selectedBlock != nil {
+                            BlockOptionRow(
+                                block: nil,
+                                isSelected: false,
+                                label: "No block",
+                                subtitle: "Remove block assignment"
+                            ) {
+                                selectedBlock = nil
+                                Haptics.impact(.light)
+                                dismiss()
+                            }
+                            .padding(.horizontal, Spacing.xl)
+                        }
+
+                        ForEach(Array(blocksByWeekAndDay.enumerated()), id: \.offset) { _, weekGroup in
+                            VStack(alignment: .leading, spacing: Spacing.md) {
+                                // Week header
+                                Text(weekGroup.weekLabel.uppercased())
+                                    .font(Typography.labelSmall)
+                                    .foregroundColor(.textMuted)
+                                    .tracking(1)
+                                    .padding(.horizontal, Spacing.xl)
+                                    .padding(.top, Spacing.sm)
+
+                                // Days within this week
+                                ForEach(Array(weekGroup.days.enumerated()), id: \.offset) { _, dayGroup in
+                                    VStack(alignment: .leading, spacing: Spacing.sm) {
+                                        // Day header
+                                        Text(formatDayHeader(dayGroup.date))
+                                            .font(Typography.labelMedium)
+                                            .foregroundColor(.textSecondary)
+                                            .padding(.horizontal, Spacing.xl)
+
+                                        // Blocks for this day
+                                        ForEach(dayGroup.blocks) { block in
+                                            BlockOptionRow(
+                                                block: block,
+                                                isSelected: selectedBlock?.id == block.id,
+                                                label: block.priorityName,
+                                                subtitle: "\(block.formattedTimeRange) • \(block.formattedDuration)"
+                                            ) {
+                                                selectedBlock = block
+                                                Haptics.impact(.medium)
+                                                dismiss()
+                                            }
+                                            .padding(.horizontal, Spacing.xl)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .padding(.vertical, Spacing.md)
                 }
             }
-
-            Spacer()
         }
-        .padding(.horizontal, Spacing.xl)
         .background(Color.backgroundSecondary)
     }
 }
 
-struct DurationOptionCell: View {
-    let label: String
+struct BlockOptionRow: View {
+    let block: TimeBlock?
     let isSelected: Bool
-    let color: Color
-
+    let label: String
+    let subtitle: String
     let onTap: () -> Void
 
     var body: some View {
-        Text(label)
-            .font(Typography.labelSmall)
-            .fontWeight(.medium)
-            .foregroundColor(isSelected ? .white : color)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, Spacing.sm)
-            .background(
-                RoundedRectangle(cornerRadius: CornerRadius.md)
-                    .fill(isSelected ? color : color.opacity(0.1))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: CornerRadius.md)
-                            .stroke(color.opacity(isSelected ? 0 : 0.3), lineWidth: 1)
-                    )
-            )
-            .onTapGesture(perform: onTap)
+        HStack(spacing: Spacing.md) {
+            // Color indicator
+            RoundedRectangle(cornerRadius: 3)
+                .fill(block?.priorityColor ?? Color.textMuted)
+                .frame(width: 4, height: 40)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(Typography.bodyMedium)
+                    .fontWeight(.medium)
+                    .foregroundColor(.textPrimary)
+
+                Text(subtitle)
+                    .font(Typography.labelSmall)
+                    .foregroundColor(.textSecondary)
+            }
+
+            Spacer()
+
+            if isSelected {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(.accentPrimary)
+            }
+        }
+        .padding(Spacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: CornerRadius.md)
+                .fill(isSelected ? Color.accentPrimary.opacity(0.1) : Color.surfacePrimary)
+                .overlay(
+                    RoundedRectangle(cornerRadius: CornerRadius.md)
+                        .stroke(isSelected ? Color.accentPrimary.opacity(0.3) : Color.surfaceBorder, lineWidth: 1)
+                )
+        )
+        .onTapGesture(perform: onTap)
     }
 }
 
@@ -1271,5 +1669,5 @@ struct FlowLayout: Layout {
 }
 
 #Preview {
-    AddTaskSheet(taskStore: TaskStore(), priorityStore: OnboardingState())
+    AddTaskSheet(taskStore: TaskStore(), priorityStore: OnboardingState(), timeBlockStore: TimeBlockStore())
 }

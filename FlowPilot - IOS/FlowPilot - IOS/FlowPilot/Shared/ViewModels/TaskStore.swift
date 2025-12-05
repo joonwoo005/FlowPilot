@@ -204,11 +204,12 @@ class TaskStore: ObservableObject {
 
     // MARK: - Task Actions
 
-    func addTask(name: String, dueDate: Date? = nil, priority: Priority? = nil) {
+    func addTask(name: String, dueDate: Date? = nil, priority: Priority? = nil, timeBlockId: UUID? = nil) {
         let task = FlowTask(
             name: name,
             dueDate: dueDate,
-            priority: priority
+            priority: priority,
+            timeBlockId: timeBlockId
         )
 
         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
@@ -217,12 +218,33 @@ class TaskStore: ObservableObject {
 
         logActivity(taskId: task.id, taskName: task.name, action: .created)
 
+        // Schedule notification for tasks with due time but not assigned to a block
+        if let dueDate = dueDate, timeBlockId == nil {
+            NotificationService.shared.scheduleTaskNotification(
+                taskId: task.id,
+                taskName: task.name,
+                dueDate: dueDate
+            )
+        }
+
         // Save to Firestore
         if let userId = userId {
             Task {
                 try? await TaskRepository.shared.createTask(task, userId: userId)
             }
         }
+    }
+
+    // MARK: - Tasks by Time Block
+
+    func tasks(for blockId: UUID) -> [FlowTask] {
+        tasks.filter { $0.timeBlockId == blockId }
+            .sorted { $0.createdAt < $1.createdAt }
+    }
+
+    func incompleteTasks(for blockId: UUID) -> [FlowTask] {
+        tasks.filter { $0.timeBlockId == blockId && !$0.isCompleted }
+            .sorted { $0.createdAt < $1.createdAt }
     }
 
     func toggleComplete(_ task: FlowTask) {
@@ -236,6 +258,15 @@ class TaskStore: ObservableObject {
             }
             pendingCompletions.removeValue(forKey: task.id)
 
+            // Reschedule notification if task has due date and no time block
+            if let dueDate = task.dueDate, task.timeBlockId == nil {
+                NotificationService.shared.scheduleTaskNotification(
+                    taskId: task.id,
+                    taskName: task.name,
+                    dueDate: dueDate
+                )
+            }
+
             // Update in Firestore
             if let userId = userId {
                 Task {
@@ -243,6 +274,9 @@ class TaskStore: ObservableObject {
                 }
             }
         } else {
+            // Cancel notification when completing
+            NotificationService.shared.cancelTaskNotification(taskId: task.id)
+
             // Mark as completing (with undo window)
             let completionTime = Date()
             pendingCompletions[task.id] = completionTime
@@ -288,6 +322,9 @@ class TaskStore: ObservableObject {
     func completeTask(_ task: FlowTask) {
         guard let index = tasks.firstIndex(where: { $0.id == task.id }) else { return }
 
+        // Cancel any scheduled notification
+        NotificationService.shared.cancelTaskNotification(taskId: task.id)
+
         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
             tasks[index].isCompleted = true
             tasks[index].completedAt = Date()
@@ -302,10 +339,22 @@ class TaskStore: ObservableObject {
             tasks[index].isCompleted = false
             tasks[index].completedAt = nil
         }
+
+        // Reschedule notification if task has due date and no time block
+        if let dueDate = task.dueDate, task.timeBlockId == nil {
+            NotificationService.shared.scheduleTaskNotification(
+                taskId: task.id,
+                taskName: task.name,
+                dueDate: dueDate
+            )
+        }
     }
 
     func deleteTask(_ task: FlowTask) {
         logActivity(taskId: task.id, taskName: task.name, action: .deleted)
+
+        // Cancel any scheduled notification
+        NotificationService.shared.cancelTaskNotification(taskId: task.id)
 
         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
             tasks.removeAll { $0.id == task.id }
@@ -323,6 +372,16 @@ class TaskStore: ObservableObject {
     func updateTask(_ task: FlowTask) {
         if let index = tasks.firstIndex(where: { $0.id == task.id }) {
             tasks[index] = task
+        }
+
+        // Update notification: cancel existing, schedule new if applicable
+        NotificationService.shared.cancelTaskNotification(taskId: task.id)
+        if let dueDate = task.dueDate, task.timeBlockId == nil, !task.isCompleted {
+            NotificationService.shared.scheduleTaskNotification(
+                taskId: task.id,
+                taskName: task.name,
+                dueDate: dueDate
+            )
         }
 
         // Update in Firestore

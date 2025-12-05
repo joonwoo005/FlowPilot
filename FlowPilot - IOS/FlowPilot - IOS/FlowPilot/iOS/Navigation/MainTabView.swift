@@ -4,9 +4,13 @@ struct MainTabView: View {
     let userName: String
     @ObservedObject var priorityStore: OnboardingState
     @StateObject private var taskStore = TaskStore()
-    @State private var selectedTab: Tab = .inbox
+    @StateObject private var timeBlockStore = TimeBlockStore()
+    @State private var selectedTab: Tab = .today
+    @State private var resetTodayView: Bool = false  // Toggle to reset TodayView to today
     @State private var showSettings = false
     @State private var showAddTask = false
+    @State private var taskToEdit: FlowTask? = nil
+    @State private var addTaskContextDate: Date? = nil
     @AppStorage("isLoggedIn") private var isLoggedIn = false
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
 
@@ -17,19 +21,33 @@ struct MainTabView: View {
         case browse
     }
 
+    // Custom binding to detect tab re-selection
+    private var tabSelection: Binding<Tab> {
+        Binding(
+            get: { selectedTab },
+            set: { newTab in
+                if newTab == .today && selectedTab == .today {
+                    // Re-tapped Today tab while already on it - reset to today
+                    resetTodayView.toggle()
+                }
+                selectedTab = newTab
+            }
+        )
+    }
+
     var body: some View {
-        TabView(selection: $selectedTab) {
+        TabView(selection: tabSelection) {
             // Inbox Tab
-            InboxView(taskStore: taskStore, showSettings: $showSettings, showAddTask: $showAddTask)
+            InboxView(taskStore: taskStore, showSettings: $showSettings, showAddTask: $showAddTask, taskToEdit: $taskToEdit, addTaskContextDate: $addTaskContextDate)
                 .tabItem {
                     Label("Inbox", systemImage: "tray.fill")
                 }
                 .tag(Tab.inbox)
 
             // Today Tab
-            TodayPlaceholderView()
+            TodayView(taskStore: taskStore, priorityStore: priorityStore, timeBlockStore: timeBlockStore, resetToToday: $resetTodayView)
                 .tabItem {
-                    Label("Today", systemImage: "sun.max.fill")
+                    Label("Day", systemImage: "sun.max.fill")
                 }
                 .tag(Tab.today)
 
@@ -63,7 +81,12 @@ struct MainTabView: View {
             )
         }
         .sheet(isPresented: $showAddTask) {
-            AddTaskSheet(taskStore: taskStore, priorityStore: priorityStore)
+            AddTaskSheet(taskStore: taskStore, priorityStore: priorityStore, timeBlockStore: timeBlockStore, contextDate: addTaskContextDate)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(item: $taskToEdit) { task in
+            AddTaskSheet(taskStore: taskStore, priorityStore: priorityStore, timeBlockStore: timeBlockStore, editingTask: task)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }

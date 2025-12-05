@@ -5,9 +5,13 @@ struct InboxView: View {
     @ObservedObject var taskStore: TaskStore
     @Binding var showSettings: Bool
     @Binding var showAddTask: Bool
+    @Binding var taskToEdit: FlowTask?
+    @Binding var addTaskContextDate: Date?
 
     @State private var showActivityLog = false
     @State private var activityFilter: TaskStore.ActivityFilter = .all
+    @State private var showNavBarTitle = false
+    @State private var taskToDelete: FlowTask? = nil
 
     var body: some View {
         NavigationStack {
@@ -17,6 +21,33 @@ struct InboxView: View {
 
                 ScrollView {
                     LazyVStack(spacing: Spacing.lg) {
+                        // Custom header with Inbox title and active counter
+                        HStack(alignment: .center) {
+                            Text("Inbox")
+                                .font(.system(size: 34, weight: .bold))
+                                .foregroundColor(.textPrimary)
+
+                            Spacer()
+
+                            activeTasksCounter
+                        }
+                        .padding(.top, Spacing.sm)
+                        .background(
+                            GeometryReader { geo in
+                                Color.clear
+                                    .onChange(of: geo.frame(in: .global).maxY) { _, newValue in
+                                        // Header is off screen when its bottom edge goes above ~100pt from top
+                                        let threshold: CGFloat = 100
+                                        let shouldShow = newValue < threshold
+                                        if shouldShow != showNavBarTitle {
+                                            withAnimation(.easeInOut(duration: 0.15)) {
+                                                showNavBarTitle = shouldShow
+                                            }
+                                        }
+                                    }
+                            }
+                        )
+
                         // Day-based sections
                         ForEach(taskStore.tasksByDay) { section in
                             TaskSection(
@@ -24,8 +55,13 @@ struct InboxView: View {
                                 titleColor: section.color,
                                 tasks: section.tasks,
                                 taskStore: taskStore,
-                                onAddTask: { showAddTask = true },
-                                date: section.date
+                                onAddTask: {
+                                    addTaskContextDate = section.date
+                                    showAddTask = true
+                                },
+                                onEditTask: { task in taskToEdit = task },
+                                date: section.date,
+                                taskToDelete: $taskToDelete
                             )
                         }
 
@@ -39,8 +75,7 @@ struct InboxView: View {
                     .padding(.bottom, 100)
                 }
             }
-            .navigationTitle("Inbox")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbarBackground(Color.backgroundPrimary, for: .navigationBar)
             .toolbar {
@@ -50,14 +85,12 @@ struct InboxView: View {
                         settingsButton
                     }
                 }
-            }
-            .safeAreaInset(edge: .top, spacing: 0) {
-                HStack {
-                    Spacer()
-                    activeTasksCounter
+                ToolbarItem(placement: .principal) {
+                    Text("Inbox")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(.textPrimary)
+                        .opacity(showNavBarTitle ? 1 : 0)
                 }
-                .padding(.horizontal, Spacing.lg)
-                .padding(.bottom, Spacing.sm)
             }
             .sheet(isPresented: $showActivityLog) {
                 ActivityLogSheet(
@@ -69,6 +102,27 @@ struct InboxView: View {
             }
             .overlay(alignment: .bottomTrailing) {
                 floatingAddButton
+            }
+            .overlay {
+                if taskToDelete != nil {
+                    DeleteConfirmationOverlay(
+                        task: taskToDelete,
+                        onCancel: {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                taskToDelete = nil
+                            }
+                        },
+                        onDelete: {
+                            if let task = taskToDelete {
+                                taskStore.deleteTask(task)
+                            }
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                taskToDelete = nil
+                            }
+                        }
+                    )
+                    .transition(.opacity)
+                }
             }
         }
     }
@@ -88,6 +142,7 @@ struct InboxView: View {
             .padding(.bottom, Spacing.xxl)
             .onTapGesture {
                 Haptics.impact(.light)
+                addTaskContextDate = nil  // No context date for general add
                 showAddTask = true
             }
     }
@@ -154,6 +209,7 @@ struct InboxView: View {
             )
             .onTapGesture {
                 Haptics.impact(.light)
+                addTaskContextDate = nil  // No context date for general add
                 showAddTask = true
             }
         }
@@ -188,7 +244,9 @@ struct TaskSection: View {
     let tasks: [FlowTask]
     @ObservedObject var taskStore: TaskStore
     let onAddTask: () -> Void
+    var onEditTask: ((FlowTask) -> Void)? = nil
     var date: Date? = nil
+    @Binding var taskToDelete: FlowTask?
 
     @State private var isExpanded = true
 
@@ -249,7 +307,12 @@ struct TaskSection: View {
             if isExpanded {
                 VStack(spacing: Spacing.xs) {
                     ForEach(tasks) { task in
-                        TaskRow(task: task, taskStore: taskStore)
+                        TaskRow(
+                            task: task,
+                            taskStore: taskStore,
+                            taskToDelete: $taskToDelete,
+                            onEdit: { onEditTask?(task) }
+                        )
                     }
 
                     // Add task button
@@ -293,6 +356,8 @@ struct TaskSection: View {
 struct TaskRow: View {
     let task: FlowTask
     @ObservedObject var taskStore: TaskStore
+    @Binding var taskToDelete: FlowTask?
+    var onEdit: (() -> Void)? = nil
 
     @State private var isPendingCompletion = false
     @State private var strikethroughProgress: CGFloat = 0
@@ -301,10 +366,10 @@ struct TaskRow: View {
 
     var body: some View {
         HStack(spacing: Spacing.md) {
-            // Checkbox
+            // Checkbox - separate tap target
             checkboxView
 
-            // Task content
+            // Task content - tappable for edit
             VStack(alignment: .leading, spacing: 2) {
                 // Task name with animated strikethrough
                 AnimatedStrikethroughText(
@@ -341,14 +406,23 @@ struct TaskRow: View {
                     }
                 }
             }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                guard !task.isCompleted else { return }
+                Haptics.impact(.light)
+                onEdit?()
+            }
 
             Spacer()
         }
         .padding(.vertical, Spacing.sm)
         .padding(.horizontal, Spacing.xs)
-        .contentShape(Rectangle())
         .opacity(task.isCompleted ? 0.5 : 1)
         .animation(.easeInOut(duration: 0.2), value: task.isCompleted)
+        .onLongPressGesture(minimumDuration: 0.5) {
+            Haptics.impact(.medium)
+            taskToDelete = task
+        }
     }
 
     private var checkboxView: some View {
@@ -402,6 +476,7 @@ struct TaskRow: View {
 
     private func startPendingCompletion() {
         isPendingCompletion = true
+        SoundService.shared.playCompletionSound()
 
         // Animate checkmark
         withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
@@ -468,13 +543,115 @@ struct AnimatedStrikethroughText: View {
     }
 }
 
+// MARK: - Delete Confirmation Overlay
+struct DeleteConfirmationOverlay: View {
+    let task: FlowTask?
+    let onCancel: () -> Void
+    let onDelete: () -> Void
+
+    @State private var showContent = false
+
+    var body: some View {
+        ZStack {
+            // Backdrop
+            Color.black.opacity(0.6)
+                .ignoresSafeArea()
+                .onTapGesture {
+                    Haptics.impact(.light)
+                    onCancel()
+                }
+
+            // Confirmation card
+            VStack(spacing: 0) {
+                Spacer()
+
+                VStack(spacing: Spacing.lg) {
+                    // Icon
+                    ZStack {
+                        Circle()
+                            .fill(Color.accentError.opacity(0.15))
+                            .frame(width: 56, height: 56)
+
+                        Image(systemName: "trash")
+                            .font(.system(size: 24, weight: .medium))
+                            .foregroundColor(.accentError)
+                    }
+
+                    // Text
+                    VStack(spacing: Spacing.xs) {
+                        Text("Delete Task?")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundColor(.textPrimary)
+
+                        if let task = task {
+                            Text(task.name)
+                                .font(Typography.bodyMedium)
+                                .foregroundColor(.textSecondary)
+                                .lineLimit(2)
+                                .multilineTextAlignment(.center)
+                        }
+                    }
+
+                    // Buttons
+                    VStack(spacing: Spacing.sm) {
+                        // Delete button
+                        Text("Delete")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, Spacing.md)
+                            .background(
+                                RoundedRectangle(cornerRadius: CornerRadius.md)
+                                    .fill(Color.accentError)
+                            )
+                            .onTapGesture {
+                                Haptics.impact(.medium)
+                                onDelete()
+                            }
+
+                        // Cancel button
+                        Text("Cancel")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.textSecondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, Spacing.md)
+                            .background(
+                                RoundedRectangle(cornerRadius: CornerRadius.md)
+                                    .fill(Color.surfaceSecondary)
+                            )
+                            .onTapGesture {
+                                Haptics.impact(.light)
+                                onCancel()
+                            }
+                    }
+                }
+                .padding(Spacing.xl)
+                .background(
+                    RoundedRectangle(cornerRadius: CornerRadius.xl)
+                        .fill(Color.surfacePrimary)
+                )
+                .padding(.horizontal, Spacing.lg)
+                .padding(.bottom, Spacing.xxxl)
+                .offset(y: showContent ? 0 : 300)
+            }
+        }
+        .onAppear {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                showContent = true
+            }
+        }
+    }
+}
+
 #Preview {
     let taskStore = TaskStore()
 
     return InboxView(
         taskStore: taskStore,
         showSettings: .constant(false),
-        showAddTask: .constant(false)
+        showAddTask: .constant(false),
+        taskToEdit: .constant(nil),
+        addTaskContextDate: .constant(nil)
     )
     .onAppear {
         taskStore.loadDemoData()
