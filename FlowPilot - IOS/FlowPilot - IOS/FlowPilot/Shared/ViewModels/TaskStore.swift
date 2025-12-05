@@ -1,5 +1,6 @@
 import SwiftUI
 import Combine
+import FirebaseFirestore
 
 // MARK: - Task Store
 class TaskStore: ObservableObject {
@@ -9,6 +10,43 @@ class TaskStore: ObservableObject {
 
     private let undoDelay: TimeInterval = 1.5
     private var cancellables = Set<AnyCancellable>()
+
+    // Firestore integration
+    private var userId: String?
+    private var taskListener: ListenerRegistration?
+    private var activityListener: ListenerRegistration?
+
+    // MARK: - Firestore Sync
+
+    func startListening(userId: String) {
+        self.userId = userId
+        stopListening()
+
+        // Listen to tasks
+        taskListener = TaskRepository.shared.listenToTasks(userId: userId) { [weak self] tasks in
+            DispatchQueue.main.async {
+                self?.tasks = tasks
+            }
+        }
+
+        // Listen to activity logs
+        activityListener = ActivityLogRepository.shared.listenToActivityLogs(userId: userId) { [weak self] logs in
+            DispatchQueue.main.async {
+                self?.activityLog = logs
+            }
+        }
+    }
+
+    func stopListening() {
+        taskListener?.remove()
+        taskListener = nil
+        activityListener?.remove()
+        activityListener = nil
+    }
+
+    deinit {
+        stopListening()
+    }
 
     // MARK: - Computed Properties
 
@@ -178,6 +216,13 @@ class TaskStore: ObservableObject {
         }
 
         logActivity(taskId: task.id, taskName: task.name, action: .created)
+
+        // Save to Firestore
+        if let userId = userId {
+            Task {
+                try? await TaskRepository.shared.createTask(task, userId: userId)
+            }
+        }
     }
 
     func toggleComplete(_ task: FlowTask) {
@@ -190,6 +235,13 @@ class TaskStore: ObservableObject {
                 tasks[index].completedAt = nil
             }
             pendingCompletions.removeValue(forKey: task.id)
+
+            // Update in Firestore
+            if let userId = userId {
+                Task {
+                    try? await TaskRepository.shared.updateTask(tasks[index], userId: userId)
+                }
+            }
         } else {
             // Mark as completing (with undo window)
             let completionTime = Date()
@@ -200,6 +252,8 @@ class TaskStore: ObservableObject {
                 tasks[index].completedAt = completionTime
             }
 
+            let updatedTask = tasks[index]
+
             // After delay, finalize completion
             DispatchQueue.main.asyncAfter(deadline: .now() + undoDelay) { [weak self] in
                 guard let self = self else { return }
@@ -207,6 +261,13 @@ class TaskStore: ObservableObject {
                 if self.pendingCompletions[task.id] != nil {
                     self.pendingCompletions.removeValue(forKey: task.id)
                     self.logActivity(taskId: task.id, taskName: task.name, action: .completed)
+
+                    // Update in Firestore
+                    if let userId = self.userId {
+                        Task {
+                            try? await TaskRepository.shared.updateTask(updatedTask, userId: userId)
+                        }
+                    }
                 }
             }
         }
@@ -250,11 +311,25 @@ class TaskStore: ObservableObject {
             tasks.removeAll { $0.id == task.id }
         }
         pendingCompletions.removeValue(forKey: task.id)
+
+        // Delete from Firestore
+        if let userId = userId {
+            Task {
+                try? await TaskRepository.shared.deleteTask(taskId: task.id, userId: userId)
+            }
+        }
     }
 
     func updateTask(_ task: FlowTask) {
         if let index = tasks.firstIndex(where: { $0.id == task.id }) {
             tasks[index] = task
+        }
+
+        // Update in Firestore
+        if let userId = userId {
+            Task {
+                try? await TaskRepository.shared.updateTask(task, userId: userId)
+            }
         }
     }
 
@@ -274,6 +349,13 @@ class TaskStore: ObservableObject {
         if activityLog.count > 100 {
             activityLog = Array(activityLog.prefix(100))
         }
+
+        // Save to Firestore
+        if let userId = userId {
+            Task {
+                try? await ActivityLogRepository.shared.createActivityLog(log, userId: userId)
+            }
+        }
     }
 
     // MARK: - Clear Activity & Completed Tasks
@@ -288,6 +370,9 @@ class TaskStore: ObservableObject {
         let calendar = Calendar.current
         let now = Date()
 
+        // Collect tasks to delete for Firestore
+        var tasksToDelete: [FlowTask] = []
+
         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
             switch timeframe {
             case .today:
@@ -296,6 +381,9 @@ class TaskStore: ObservableObject {
                     calendar.isDateInToday(log.timestamp)
                 }
                 // Clear completed tasks from today
+                tasksToDelete = tasks.filter { task in
+                    task.isCompleted && task.completedAt != nil && calendar.isDateInToday(task.completedAt!)
+                }
                 tasks.removeAll { task in
                     task.isCompleted && task.completedAt != nil && calendar.isDateInToday(task.completedAt!)
                 }
@@ -307,6 +395,9 @@ class TaskStore: ObservableObject {
                     log.timestamp >= startOfWeek
                 }
                 // Clear completed tasks from this week
+                tasksToDelete = tasks.filter { task in
+                    task.isCompleted && task.completedAt != nil && task.completedAt! >= startOfWeek
+                }
                 tasks.removeAll { task in
                     task.isCompleted && task.completedAt != nil && task.completedAt! >= startOfWeek
                 }
@@ -315,7 +406,30 @@ class TaskStore: ObservableObject {
                 // Clear all activity logs
                 activityLog.removeAll()
                 // Clear all completed tasks
+                tasksToDelete = tasks.filter { $0.isCompleted }
                 tasks.removeAll { $0.isCompleted }
+            }
+        }
+
+        // Delete from Firestore
+        if let userId = userId {
+            Task {
+                // Delete completed tasks
+                for task in tasksToDelete {
+                    try? await TaskRepository.shared.deleteTask(taskId: task.id, userId: userId)
+                }
+
+                // Delete activity logs based on timeframe
+                switch timeframe {
+                case .today:
+                    let startOfToday = calendar.startOfDay(for: now)
+                    try? await ActivityLogRepository.shared.deleteActivityLogs(userId: userId, olderThan: startOfToday)
+                case .thisWeek:
+                    let startOfWeek = calendar.dateInterval(of: .weekOfYear, for: now)?.start ?? now
+                    try? await ActivityLogRepository.shared.deleteActivityLogs(userId: userId, olderThan: startOfWeek)
+                case .all:
+                    try? await ActivityLogRepository.shared.deleteAllActivityLogs(userId: userId)
+                }
             }
         }
     }

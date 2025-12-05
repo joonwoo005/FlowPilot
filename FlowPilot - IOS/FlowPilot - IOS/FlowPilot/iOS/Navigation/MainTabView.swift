@@ -68,7 +68,13 @@ struct MainTabView: View {
                 .presentationDragIndicator(.visible)
         }
         .onAppear {
-            taskStore.loadDemoData()
+            // Start Firestore listener if authenticated
+            if let userId = FirebaseConfig.shared.currentUserId {
+                taskStore.startListening(userId: userId)
+            }
+        }
+        .onDisappear {
+            taskStore.stopListening()
         }
     }
 }

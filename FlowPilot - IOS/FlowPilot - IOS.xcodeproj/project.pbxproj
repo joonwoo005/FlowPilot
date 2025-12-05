@@ -9,6 +9,9 @@
 /* Begin PBXBuildFile section */
 		F044F3922EE2D37F009B8205 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = F044F3912EE2D37F009B8205 /* GoogleSignIn */; };
 		F044F3942EE2D37F009B8205 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = F044F3932EE2D37F009B8205 /* GoogleSignInSwift */; };
+		F044F3962EE2D400009B8205 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = F044F3972EE2D400009B8205 /* FirebaseAuth */; };
+		F044F3982EE2D400009B8205 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = F044F3992EE2D400009B8205 /* FirebaseCore */; };
+		F044F39A2EE2D400009B8205 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = F044F39B2EE2D400009B8205 /* FirebaseFirestore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -30,6 +33,9 @@
 			files = (
 				F044F3922EE2D37F009B8205 /* GoogleSignIn in Frameworks */,
 				F044F3942EE2D37F009B8205 /* GoogleSignInSwift in Frameworks */,
+				F044F3962EE2D400009B8205 /* FirebaseAuth in Frameworks */,
+				F044F3982EE2D400009B8205 /* FirebaseCore in Frameworks */,
+				F044F39A2EE2D400009B8205 /* FirebaseFirestore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -74,6 +80,9 @@
 			packageProductDependencies = (
 				F044F3912EE2D37F009B8205 /* GoogleSignIn */,
 				F044F3932EE2D37F009B8205 /* GoogleSignInSwift */,
+				F044F3972EE2D400009B8205 /* FirebaseAuth */,
+				F044F3992EE2D400009B8205 /* FirebaseCore */,
+				F044F39B2EE2D400009B8205 /* FirebaseFirestore */,
 			);
 			productName = "FlowPilot - IOS";
 			productReference = F044F1E72EE28CD5009B8205 /* FlowPilot - IOS.app */;
@@ -394,6 +403,21 @@
 			isa = XCSwiftPackageProductDependency;
 			package = F044F3902EE2D37F009B8205 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
 			productName = GoogleSignInSwift;
+		};
+		F044F3972EE2D400009B8205 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F044F3952EE2D3DA009B8205 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		F044F3992EE2D400009B8205 /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F044F3952EE2D3DA009B8205 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+		F044F39B2EE2D400009B8205 /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F044F3952EE2D3DA009B8205 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

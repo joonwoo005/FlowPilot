@@ -1,5 +1,6 @@
 import Foundation
 import FirebaseFirestore
+import SwiftUI
 
 // MARK: - Task Repository
 class TaskRepository {
@@ -118,7 +119,7 @@ class TaskRepository {
             data["priority"] = [
                 "id": priority.id.uuidString,
                 "name": priority.name,
-                "colorHex": priority.colorHex
+                "colorHex": priority.color.toHexString()
             ]
         }
 
@@ -144,7 +145,7 @@ class TaskRepository {
            let priorityId = UUID(uuidString: priorityIdString),
            let priorityName = priorityData["name"] as? String,
            let colorHex = priorityData["colorHex"] as? String {
-            priority = Priority(id: priorityId, name: priorityName, colorHex: colorHex, hoursPerWeek: 0)
+            priority = Priority(id: priorityId, name: priorityName, color: Color.fromHex(colorHex), hoursPerWeek: 0)
         }
 
         return FlowTask(

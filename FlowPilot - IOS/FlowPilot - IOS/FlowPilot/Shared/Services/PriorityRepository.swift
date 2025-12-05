@@ -1,5 +1,6 @@
 import Foundation
 import FirebaseFirestore
+import SwiftUI
 
 // MARK: - Priority Repository
 class PriorityRepository {
@@ -68,7 +69,7 @@ class PriorityRepository {
         return [
             "id": priority.id.uuidString,
             "name": priority.name,
-            "colorHex": priority.colorHex,
+            "colorHex": priority.color.toHexString(),
             "hoursPerWeek": priority.hoursPerWeek,
             "createdAt": FieldValue.serverTimestamp()
         ]
@@ -85,6 +86,6 @@ class PriorityRepository {
 
         let hoursPerWeek = data["hoursPerWeek"] as? Double ?? 0
 
-        return Priority(id: id, name: name, colorHex: colorHex, hoursPerWeek: hoursPerWeek)
+        return Priority(id: id, name: name, color: Color.fromHex(colorHex), hoursPerWeek: hoursPerWeek)
     }
 }

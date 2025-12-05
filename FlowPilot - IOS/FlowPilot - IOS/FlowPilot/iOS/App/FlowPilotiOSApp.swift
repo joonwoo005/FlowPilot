@@ -70,8 +70,8 @@ struct FlowPilotiOSApp: App {
             // Save sleep schedule
             try await UserRepository.shared.updateSleepSchedule(
                 userId: userId,
-                wakeTime: state.wakeTime,
-                sleepTime: state.sleepTime
+                wakeTime: state.sleepSchedule.wakeTime,
+                sleepTime: state.sleepSchedule.sleepTime
             )
 
             // Save priorities
@@ -100,10 +100,10 @@ struct FlowPilotiOSApp: App {
                     hasCompletedOnboarding = userData.hasCompletedOnboarding
 
                     if let wakeTime = userData.wakeTime {
-                        onboardingState.wakeTime = wakeTime
+                        onboardingState.sleepSchedule.wakeTime = wakeTime
                     }
                     if let sleepTime = userData.sleepTime {
-                        onboardingState.sleepTime = sleepTime
+                        onboardingState.sleepSchedule.sleepTime = sleepTime
                     }
                 }
             }

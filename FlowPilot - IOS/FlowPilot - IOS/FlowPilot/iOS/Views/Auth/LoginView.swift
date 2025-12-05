@@ -205,7 +205,7 @@ struct LoginView: View {
     // MARK: - Sign In Actions
 
     private var signInActions: some View {
-        VStack(spacing: Spacing.sm) {
+        VStack(spacing: Spacing.lg) {
             // Primary: Google Sign In
             Button {
                 Haptics.impact(.medium)
@@ -233,6 +233,21 @@ struct LoginView: View {
                     .compositingGroup()
             }
             .buttonStyle(ScaleButtonStyle())
+
+            // Divider with "or"
+            HStack(spacing: Spacing.md) {
+                Rectangle()
+                    .fill(Color.surfaceBorder)
+                    .frame(height: 1)
+
+                Text("or")
+                    .font(Typography.labelSmall)
+                    .foregroundColor(.textMuted)
+
+                Rectangle()
+                    .fill(Color.surfaceBorder)
+                    .frame(height: 1)
+            }
 
             // Secondary: Guest access
             Button {
@@ -273,7 +288,6 @@ struct LoginView: View {
                 .font(Typography.labelSmall)
                 .foregroundColor(.textMuted)
                 .multilineTextAlignment(.center)
-                .padding(.top, Spacing.sm)
         }
     }
 

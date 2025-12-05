@@ -234,7 +234,7 @@ struct AddPrioritySheet: View {
                 TextField("", text: $name)
                     .font(Typography.bodyLarge)
                     .foregroundColor(.textPrimary)
-                    .focused($isFocused)task
+                    .focused($isFocused)
                     .placeholder(when: name.isEmpty) {
                         Text("Priority name")
                             .font(Typography.bodyLarge)

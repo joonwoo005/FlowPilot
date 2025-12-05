@@ -17,9 +17,6 @@ struct InboxView: View {
 
                 ScrollView {
                     LazyVStack(spacing: Spacing.lg) {
-                        // Active Tasks Counter
-                        activeTasksHeader
-
                         // Day-based sections
                         ForEach(taskStore.tasksByDay) { section in
                             TaskSection(
@@ -47,12 +44,12 @@ struct InboxView: View {
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbarBackground(Color.backgroundPrimary, for: .navigationBar)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    activityLogButton
-                }
-
                 ToolbarItem(placement: .topBarTrailing) {
-                    settingsButton
+                    HStack(spacing: Spacing.md) {
+                        activeTasksCounter
+                        activityLogButton
+                        settingsButton
+                    }
                 }
             }
             .sheet(isPresented: $showActivityLog) {
@@ -88,29 +85,23 @@ struct InboxView: View {
             }
     }
 
-    // MARK: - Active Tasks Header
-    private var activeTasksHeader: some View {
-        HStack(spacing: Spacing.xs) {
+    // MARK: - Active Tasks Counter
+    private var activeTasksCounter: some View {
+        HStack(spacing: 4) {
             Text("\(taskStore.activeTaskCount)")
-                .font(.system(size: 15, weight: .bold, design: .monospaced))
+                .font(.system(size: 13, weight: .bold, design: .monospaced))
                 .foregroundColor(.accentPrimary)
 
             Text("active")
-                .font(Typography.labelSmall)
+                .font(.system(size: 11, weight: .medium))
                 .foregroundColor(.textSecondary)
         }
         .padding(.horizontal, Spacing.sm)
-        .padding(.vertical, Spacing.xs)
+        .padding(.vertical, 6)
         .background(
             Capsule()
                 .fill(Color.accentPrimary.opacity(0.1))
-                .overlay(
-                    Capsule()
-                        .stroke(Color.accentPrimary.opacity(0.2), lineWidth: 1)
-                )
         )
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, Spacing.xs)
     }
 
     // MARK: - Empty State

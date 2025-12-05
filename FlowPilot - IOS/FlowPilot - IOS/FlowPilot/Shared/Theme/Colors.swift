@@ -60,4 +60,41 @@ extension Color {
             opacity: Double(a) / 255
         )
     }
+
+    /// Converts Color to hex string for storage
+    func toHexString() -> String {
+        // Map known priority colors to their hex values
+        let colorMap: [(Color, String)] = [
+            (.priorityBlue, "3B82F6"),
+            (.priorityPurple, "8B5CF6"),
+            (.priorityGreen, "10B981"),
+            (.priorityOrange, "F59E0B"),
+            (.priorityPink, "EC4899"),
+            (.priorityCyan, "06B6D4")
+        ]
+
+        for (color, hex) in colorMap {
+            if self == color {
+                return hex
+            }
+        }
+
+        // Fallback: try to extract RGB components
+        #if canImport(UIKit)
+        guard let cgColor = UIColor(self).cgColor.components else {
+            return "3B82F6" // Default to blue
+        }
+        let r = Int(cgColor[0] * 255)
+        let g = Int(cgColor[1] * 255)
+        let b = Int(cgColor[2] * 255)
+        return String(format: "%02X%02X%02X", r, g, b)
+        #else
+        return "3B82F6" // Default to blue on macOS
+        #endif
+    }
+
+    /// Creates a Color from a hex string, with fallback to priority blue
+    static func fromHex(_ hex: String) -> Color {
+        Color(hex: hex)
+    }
 }

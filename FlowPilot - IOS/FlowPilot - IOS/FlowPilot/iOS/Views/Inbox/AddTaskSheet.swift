@@ -493,7 +493,7 @@ struct AddTaskSheet: View {
                             // Time Block chip
                             DetectionChip(
                                 icon: "timer",
-                                label: displayTimeBlock.text ?? "Time block",
+                                label: displayTimeBlock.text ?? "Block",
                                 isActive: displayTimeBlock.text != nil,
                                 color: Color(red: 0.6, green: 0.25, blue: 0.25),
                                 onTap: { showTimeBlockPicker = true },
@@ -563,7 +563,7 @@ struct AddTaskSheet: View {
                     get: { manualDate ?? detectedComponents.dateValue },
                     set: { manualDate = $0 }
                 ))
-                .presentationDetents([.height(400)])
+                .presentationDetents([.height(320)])
                 .presentationDragIndicator(.visible)
             }
             .sheet(isPresented: $showTimePicker) {
@@ -701,8 +701,9 @@ struct DatePickerSheet: View {
             .padding(.top, Spacing.base)
 
             DatePicker("", selection: $pickerDate, displayedComponents: .date)
-                .datePickerStyle(.graphical)
-                .tint(.accentPrimary)
+                .datePickerStyle(.wheel)
+                .labelsHidden()
+                .frame(height: 180)
 
             Spacer()
         }
