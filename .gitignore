@@ -1,41 +1,63 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+# Xcode
+build/
+DerivedData/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+*.xccheckout
 
-# dependencies
-node_modules/
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
 
-# Expo
-.expo/
-dist/
-web-build/
-expo-env.d.ts
+# CocoaPods
+Pods/
+*.xcworkspace
 
-# Native
-.kotlin/
-*.orig.*
-*.jks
-*.p8
-*.p12
-*.key
-*.mobileprovision
-
-# Metro
-.metro-health-check*
-
-# debug
-npm-debug.*
-yarn-debug.*
-yarn-error.*
+# Carthage
+Carthage/Build/
 
 # macOS
 .DS_Store
+*.swp
+*~
+
+# Secrets & credentials
+*.p12
+*.p8
+*.key
 *.pem
+*.mobileprovision
+*.cer
+*.env
+.env.*
+GoogleService-Info.plist
 
-# local env files
-.env*.local
+# Archives
+*.ipa
+*.dSYM.zip
+*.dSYM
 
-# typescript
-*.tsbuildinfo
+# Playgrounds
+timeline.xctimeline
+playground.xcworkspace
 
-# generated native folders
-/ios
-/android
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# Code Injection
+.idea/
+*.hmap
+
+# Old Expo/Node (legacy)
+node_modules/
+.expo/
+dist/
+npm-debug.*
+yarn-debug.*
+yarn-error.*
