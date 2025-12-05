@@ -388,7 +388,16 @@ struct AddTaskSheet: View {
     @State private var priorityJustDetected = false
     @State private var timeBlockJustDetected = false
 
+    // Validation
+    @State private var showNoDescriptionError = false
+
     @FocusState private var isNameFocused: Bool
+
+    // Computed property for cleaned task name
+    private var cleanedTaskName: String {
+        SmartTextParser.cleanTaskName(taskName, detected: detectedComponents)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 
     // Computed display values
     private var displayDate: (text: String?, value: Date?) {
@@ -499,6 +508,15 @@ struct AddTaskSheet: View {
                                     if !taskName.hasSuffix("  ") {
                                         taskName.append("  ")
                                     }
+                                }
+                            }
+
+                            // Hide error if user adds actual task description
+                            let cleaned = SmartTextParser.cleanTaskName(taskName, detected: newDetections)
+                                .trimmingCharacters(in: .whitespacesAndNewlines)
+                            if !cleaned.isEmpty && showNoDescriptionError {
+                                withAnimation(.easeOut(duration: 0.15)) {
+                                    showNoDescriptionError = false
                                 }
                             }
 
@@ -637,6 +655,18 @@ struct AddTaskSheet: View {
 
                     Spacer()
 
+                    // Error message
+                    if showNoDescriptionError {
+                        HStack(spacing: Spacing.xs) {
+                            Image(systemName: "exclamationmark.circle.fill")
+                                .font(.system(size: 14))
+                            Text("Please add a task description")
+                                .font(Typography.bodySmall)
+                        }
+                        .foregroundColor(.dueDateOverdue)
+                        .padding(.bottom, Spacing.sm)
+                    }
+
                     // Add button
                     PrimaryButton(
                         title: "Add Task",
@@ -734,7 +764,19 @@ struct AddTaskSheet: View {
     // MARK: - Add Task
     private func addTask() {
         let cleanedName = SmartTextParser.cleanTaskName(taskName, detected: detectedComponents)
-        guard !cleanedName.isEmpty else { return }
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Check if there's actual task description (not just detected components)
+        guard !cleanedName.isEmpty else {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                showNoDescriptionError = true
+            }
+            Haptics.notification(.warning)
+            return
+        }
+
+        // Hide error if it was showing
+        showNoDescriptionError = false
 
         // Combine date and time
         var finalDate = displayDate.value
