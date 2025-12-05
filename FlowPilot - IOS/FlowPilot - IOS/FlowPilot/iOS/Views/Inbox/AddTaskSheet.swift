@@ -485,15 +485,21 @@ struct AddTaskSheet: View {
                             // Capture previous detection count
                             let previousCount = detectedComponents.allDetectedRanges.count
 
+                            let newDetections = SmartTextParser.parse(taskName, priorities: priorityStore.priorities)
+
                             withAnimation(.easeOut(duration: 0.15)) {
-                                detectedComponents = SmartTextParser.parse(taskName, priorities: priorityStore.priorities)
+                                detectedComponents = newDetections
                             }
 
-                            // Auto-insert spaces when a new detection is made at end of text
-                            let newCount = detectedComponents.allDetectedRanges.count
+                            // Auto-insert spaces when a new detection is made
+                            let newCount = newDetections.allDetectedRanges.count
                             if newCount > previousCount && !taskName.hasSuffix("  ") {
-                                // A new detection was made, add spacing
-                                taskName.append("  ")
+                                // Defer the modification to avoid state conflicts
+                                DispatchQueue.main.async {
+                                    if !taskName.hasSuffix("  ") {
+                                        taskName.append("  ")
+                                    }
+                                }
                             }
 
                             // Check for newly detected components and trigger highlights
