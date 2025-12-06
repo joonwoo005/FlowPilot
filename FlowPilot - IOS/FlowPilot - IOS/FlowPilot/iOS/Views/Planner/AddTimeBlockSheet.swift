@@ -101,6 +101,7 @@ struct AddTimeBlockSheet: View {
 
     @State private var isEditingStartTime = false
     @State private var isEditingEndTime = false
+    @State private var isEditingDate = false
 
     private let reminderOptions = [5, 10, 15, 30, 60]
 
@@ -312,6 +313,12 @@ struct AddTimeBlockSheet: View {
                 selectedReminders = Set(block.earlyReminders)
             }
         }
+        .onChange(of: isEditingStartTime) { _, isEditing in
+            if isEditing { isEditingDate = false }
+        }
+        .onChange(of: isEditingEndTime) { _, isEditing in
+            if isEditing { isEditingDate = false }
+        }
     }
 
     // MARK: - Header
@@ -407,24 +414,55 @@ struct AddTimeBlockSheet: View {
                 .foregroundColor(.textMuted)
                 .tracking(1)
 
-            DatePicker(
-                "",
-                selection: $blockDate,
-                displayedComponents: .date
-            )
-            .datePickerStyle(.compact)
-            .labelsHidden()
-            .padding(.horizontal, Spacing.base)
-            .padding(.vertical, Spacing.md)
-            .background(
-                RoundedRectangle(cornerRadius: CornerRadius.md)
-                    .fill(Color.surfacePrimary)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: CornerRadius.md)
-                            .stroke(Color.surfaceBorder, lineWidth: 1)
-                    )
-            )
+            VStack(spacing: Spacing.sm) {
+                // Date display button
+                HStack {
+                    Text(formattedBlockDate)
+                        .font(.system(size: 24, weight: .medium))
+                        .foregroundColor(.textPrimary)
+
+                    Spacer()
+
+                    Image(systemName: "calendar")
+                        .font(.system(size: 18))
+                        .foregroundColor(.textMuted)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, Spacing.base)
+                .padding(.vertical, Spacing.md)
+                .background(
+                    RoundedRectangle(cornerRadius: CornerRadius.md)
+                        .fill(Color.surfacePrimary)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: CornerRadius.md)
+                                .stroke(isEditingDate ? Color.accentPrimary : Color.surfaceBorder, lineWidth: isEditingDate ? 2 : 1)
+                        )
+                )
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    Haptics.impact(.light)
+                    isEditingStartTime = false
+                    isEditingEndTime = false
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        isEditingDate.toggle()
+                    }
+                }
+
+                // Expandable date picker
+                if isEditingDate {
+                    DatePicker("", selection: $blockDate, displayedComponents: .date)
+                        .datePickerStyle(.graphical)
+                        .labelsHidden()
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+            }
         }
+    }
+
+    private var formattedBlockDate: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "d MMM yyyy"
+        return formatter.string(from: blockDate)
     }
 
     // MARK: - Time Selection Section

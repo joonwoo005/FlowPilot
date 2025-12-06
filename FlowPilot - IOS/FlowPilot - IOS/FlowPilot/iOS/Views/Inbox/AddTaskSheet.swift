@@ -638,6 +638,9 @@ struct AddTaskSheet: View {
                 await MainActor.run { timeBlockJustDetected = false }
             }
         }
+
+        // Check if the detected date/time falls within a time block
+        checkForCoincidingBlock()
     }
 
     // MARK: - Detection Chips Section
@@ -737,6 +740,86 @@ struct AddTaskSheet: View {
                 allDetectedRanges: detectedComponents.allDetectedRanges.filter { $0.type == .priority }
             ))
             detectedComponents = SmartTextParser.parse(taskName, priorities: priorityStore.priorities)
+        }
+    }
+
+    // MARK: - Auto-detect Time Block from Date/Time
+    /// Finds a time block that contains the given date and time
+    private func findCoincidingBlock(date: Date, time: DateComponents) -> TimeBlock? {
+        let calendar = Calendar.current
+        guard let hour = time.hour else { return nil }
+        let minute = time.minute ?? 0
+
+        // Create the full datetime by combining the date with the time
+        var dateComponents = calendar.dateComponents([.year, .month, .day], from: date)
+        dateComponents.hour = hour
+        dateComponents.minute = minute
+        dateComponents.second = 0
+
+        guard let taskDateTime = calendar.date(from: dateComponents) else { return nil }
+
+        // Find a block that contains this datetime
+        for block in timeBlockStore.timeBlocks {
+            if taskDateTime >= block.startTime && taskDateTime < block.endTime {
+                return block
+            }
+        }
+        return nil
+    }
+
+    /// Check if current date/time selection falls within a time block and auto-select it
+    private func checkForCoincidingBlock() {
+        // Don't override if there's already a locked block from context
+        guard lockedBlock == nil else { return }
+
+        // Get the effective date and time (from manual selection or detection)
+        let effectiveDate: Date?
+        if let manual = manualDate {
+            effectiveDate = manual
+        } else {
+            effectiveDate = detectedComponents.dateValue
+        }
+
+        let effectiveTime: DateComponents?
+        if let manual = manualTime {
+            effectiveTime = manual
+        } else {
+            effectiveTime = detectedComponents.timeValue
+        }
+
+        // Both date and time must be set to check for coinciding blocks
+        guard let date = effectiveDate, let time = effectiveTime else {
+            // Clear auto-selected block if date or time is removed
+            if selectedBlock != nil && lockedBlock == nil {
+                withAnimation(.easeOut(duration: 0.2)) {
+                    selectedBlock = nil
+                }
+            }
+            return
+        }
+
+        // Find coinciding block
+        if let coincidingBlock = findCoincidingBlock(date: date, time: time) {
+            // Only update if it's different from current selection
+            if selectedBlock?.id != coincidingBlock.id {
+                withAnimation(.easeOut(duration: 0.2)) {
+                    selectedBlock = coincidingBlock
+                    // Also trigger the highlight animation
+                    timeBlockJustDetected = true
+                }
+                Haptics.impact(.light)
+                Task {
+                    try? await Task.sleep(nanoseconds: 600_000_000)
+                    await MainActor.run { timeBlockJustDetected = false }
+                }
+            }
+        } else {
+            // Clear selection if no longer coinciding (but only if it was auto-selected)
+            if selectedBlock != nil {
+                withAnimation(.easeOut(duration: 0.2)) {
+                    selectedBlock = nil
+                }
+            }
         }
     }
 
@@ -891,6 +974,14 @@ struct AddTaskSheet: View {
                     manualTime = DateComponents(hour: hour, minute: minute)
                     manualPriority = priorityStore.priorities.first { $0.id == block.priorityId }
                 }
+            }
+            .onChange(of: manualDate) { _, _ in
+                // Check if the new date/time combination falls within a time block
+                checkForCoincidingBlock()
+            }
+            .onChange(of: manualTime) { _, _ in
+                // Check if the new date/time combination falls within a time block
+                checkForCoincidingBlock()
             }
             .sheet(isPresented: $showAddBlockSheet) {
                 AddTimeBlockSheet(
