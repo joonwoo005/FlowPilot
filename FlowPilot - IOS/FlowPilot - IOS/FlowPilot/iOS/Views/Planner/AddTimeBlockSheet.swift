@@ -47,6 +47,7 @@ struct AddTimeBlockSheet: View {
     @State private var blockDate: Date  // The date for the block (editable in edit mode)
 
     private var isEditMode: Bool { editingBlock != nil }
+    private var isEditingRecurringBlock: Bool { editingBlock?.isRecurring ?? false }
 
     init(priorityStore: OnboardingState, timeBlockStore: TimeBlockStore, targetDate: Date = Date(), editingBlock: TimeBlock? = nil) {
         self.priorityStore = priorityStore
@@ -103,6 +104,13 @@ struct AddTimeBlockSheet: View {
     @State private var isEditingEndTime = false
     @State private var isEditingDate = false
 
+    // Recurring block state
+    @State private var isRecurring = false
+    @State private var selectedDays: Set<Int> = []
+
+    // Recurring edit confirmation
+    @State private var showRecurringEditConfirmation = false
+
     private let reminderOptions = [5, 10, 15, 30, 60]
 
     private var duration: String {
@@ -120,15 +128,20 @@ struct AddTimeBlockSheet: View {
     }
 
     private var isValidBlock: Bool {
-        selectedPriority != nil && endTime > startTime && conflicts.isEmpty
+        let basicValid = selectedPriority != nil && endTime > startTime && conflicts.isEmpty
+        // If recurring mode is on, require at least one day selected
+        if isRecurring {
+            return basicValid && !selectedDays.isEmpty
+        }
+        return basicValid
     }
 
     // MARK: - Conflict Detection
     private var conflicts: [BlockConflict] {
         var result: [BlockConflict] = []
 
-        let normalizedStart = normalizeToTargetDate(startTime)
-        let normalizedEnd = normalizeToTargetDate(endTime)
+        let normalizedStart = normalizeToTargetDate(startTime, isEndTime: false)
+        let normalizedEnd = normalizeToTargetDate(endTime, isEndTime: true)
 
         // Check for conflicts with existing blocks on the effective date
         // Exclude the editing block from overlap checks
@@ -222,25 +235,11 @@ struct AddTimeBlockSheet: View {
         return "\(minutes)m"
     }
 
-    /// Get the start of the week (Monday at 00:00) for a given date
-    private func startOfWeek(for date: Date) -> Date {
-        var calendar = Calendar.current
-        calendar.firstWeekday = 2 // Monday = 2
-        let components = calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: date)
-        return calendar.date(from: components) ?? date
-    }
-
-    /// Get the end of the week for a given date
-    private func endOfWeek(for date: Date) -> Date {
-        let weekStart = startOfWeek(for: date)
-        return Calendar.current.date(byAdding: .day, value: 7, to: weekStart) ?? date
-    }
-
     private func remainingMinutesForPriority(_ priority: Priority) -> Int {
         // Weekly allocation in minutes
         let weeklyAllocationMinutes = Int(priority.hoursPerWeek * 60)
-        let weekStart = startOfWeek(for: targetDate)
-        let weekEnd = endOfWeek(for: targetDate)
+        let weekStart = targetDate.startOfWeek()
+        let weekEnd = targetDate.endOfWeek()
 
         // Already scheduled this week for this priority
         let scheduledThisWeekMinutes = timeBlockStore.timeBlocks
@@ -286,6 +285,11 @@ struct AddTimeBlockSheet: View {
                         // Duration Display
                         durationView
 
+                        // Repeat Section (only in add mode)
+                        if !isEditMode {
+                            repeatSection
+                        }
+
                         // Conflict Warnings
                         if !conflicts.isEmpty {
                             conflictWarningsView
@@ -296,11 +300,35 @@ struct AddTimeBlockSheet: View {
                     }
                     .padding(.horizontal, Spacing.base)
                     .padding(.top, Spacing.lg)
-                    .padding(.bottom, 120)
+                    .padding(.bottom, Spacing.xl)
                 }
+                .frame(maxHeight: .infinity)
 
                 // Add Block Button
                 addBlockButton
+            }
+
+            // Recurring edit confirmation overlay
+            if showRecurringEditConfirmation {
+                RecurringEditConfirmationOverlay(
+                    block: editingBlock,
+                    onCancel: {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            showRecurringEditConfirmation = false
+                        }
+                    },
+                    onThisOneOnly: {
+                        if let priority = selectedPriority {
+                            saveBlock(priority: priority, updateAllFuture: false)
+                        }
+                    },
+                    onAllFuture: {
+                        if let priority = selectedPriority {
+                            saveBlock(priority: priority, updateAllFuture: true)
+                        }
+                    }
+                )
+                .transition(.opacity)
             }
         }
         .onAppear {
@@ -385,7 +413,8 @@ struct AddTimeBlockSheet: View {
     }
 
     /// Takes a Date and returns a new Date with the effective date's year/month/day but the same hour/minute
-    private func normalizeToTargetDate(_ date: Date) -> Date {
+    /// When isEndTime is true and the time is midnight (00:00), adds one day to represent end-of-day
+    private func normalizeToTargetDate(_ date: Date, isEndTime: Bool = false) -> Date {
         let calendar = Calendar.current
 
         // Get time components from the input date
@@ -399,7 +428,15 @@ struct AddTimeBlockSheet: View {
         dateComponents.minute = timeComponents.minute
         dateComponents.second = 0
 
-        return calendar.date(from: dateComponents) ?? date
+        guard let normalizedDate = calendar.date(from: dateComponents) else { return date }
+
+        // If this is an end time and it's midnight (00:00), it represents end of day
+        // Add one day to make it midnight after the target date
+        if isEndTime && timeComponents.hour == 0 && timeComponents.minute == 0 {
+            return calendar.date(byAdding: .day, value: 1, to: normalizedDate) ?? normalizedDate
+        }
+
+        return normalizedDate
     }
 
     private func hoursLeftForPriority(_ priority: Priority) -> Double {
@@ -467,38 +504,135 @@ struct AddTimeBlockSheet: View {
 
     // MARK: - Time Selection Section
     private var timeSelectionSection: some View {
-        HStack(spacing: Spacing.md) {
-            // Start Time
-            VStack(alignment: .leading, spacing: Spacing.sm) {
-                Text("START")
-                    .font(Typography.labelSmall)
-                    .foregroundColor(.textMuted)
-                    .tracking(1)
+        VStack(spacing: Spacing.md) {
+            // Time range display row
+            HStack(spacing: 0) {
+                // Start Time Display
+                VStack(alignment: .leading, spacing: Spacing.xs) {
+                    Text("START")
+                        .font(Typography.labelSmall)
+                        .foregroundColor(.textMuted)
+                        .tracking(1)
 
-                TimePickerButton(
-                    time: $startTime,
-                    isEditing: $isEditingStartTime,
-                    otherIsEditing: $isEditingEndTime
+                    HStack(spacing: 4) {
+                        Text(formatTimeDisplay(startTime))
+                            .font(.system(size: 28, weight: .semibold, design: .rounded))
+                            .foregroundColor(.textPrimary)
+
+                        Text(formatPeriod(startTime))
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(isEditingStartTime ? .accentPrimary : .textMuted)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, Spacing.md)
+                .padding(.horizontal, Spacing.base)
+                .background(
+                    RoundedRectangle(cornerRadius: CornerRadius.md)
+                        .fill(isEditingStartTime ? Color.accentPrimary.opacity(0.08) : Color.surfacePrimary)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: CornerRadius.md)
+                                .stroke(isEditingStartTime ? Color.accentPrimary : Color.surfaceBorder, lineWidth: isEditingStartTime ? 2 : 1)
+                        )
                 )
-            }
-            .frame(maxWidth: .infinity)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    Haptics.impact(.light)
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        if isEditingStartTime {
+                            isEditingStartTime = false
+                        } else {
+                            isEditingStartTime = true
+                            isEditingEndTime = false
+                            isEditingDate = false
+                        }
+                    }
+                }
 
-            // End Time
-            VStack(alignment: .leading, spacing: Spacing.sm) {
-                Text("END")
-                    .font(Typography.labelSmall)
+                // Arrow connector
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.textMuted)
-                    .tracking(1)
+                    .frame(width: 40)
 
-                TimePickerButton(
-                    time: $endTime,
-                    isEditing: $isEditingEndTime,
-                    otherIsEditing: $isEditingStartTime,
-                    accentBorder: true
+                // End Time Display
+                VStack(alignment: .leading, spacing: Spacing.xs) {
+                    Text("END")
+                        .font(Typography.labelSmall)
+                        .foregroundColor(.textMuted)
+                        .tracking(1)
+
+                    HStack(spacing: 4) {
+                        Text(formatTimeDisplay(endTime))
+                            .font(.system(size: 28, weight: .semibold, design: .rounded))
+                            .foregroundColor(.textPrimary)
+
+                        Text(formatPeriod(endTime))
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(isEditingEndTime ? .accentPrimary : .textMuted)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, Spacing.md)
+                .padding(.horizontal, Spacing.base)
+                .background(
+                    RoundedRectangle(cornerRadius: CornerRadius.md)
+                        .fill(isEditingEndTime ? Color.accentPrimary.opacity(0.08) : Color.surfacePrimary)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: CornerRadius.md)
+                                .stroke(isEditingEndTime ? Color.accentPrimary : Color.surfaceBorder, lineWidth: isEditingEndTime ? 2 : 1)
+                        )
                 )
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    Haptics.impact(.light)
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        if isEditingEndTime {
+                            isEditingEndTime = false
+                        } else {
+                            isEditingEndTime = true
+                            isEditingStartTime = false
+                            isEditingDate = false
+                        }
+                    }
+                }
             }
-            .frame(maxWidth: .infinity)
+
+            // Full-width time picker (shown below both time displays)
+            if isEditingStartTime || isEditingEndTime {
+                DatePicker(
+                    "",
+                    selection: isEditingStartTime ? $startTime : $endTime,
+                    displayedComponents: .hourAndMinute
+                )
+                .datePickerStyle(.wheel)
+                .labelsHidden()
+                .frame(height: 150)
+                .clipped()
+                .padding(Spacing.base)
+                .background(
+                    RoundedRectangle(cornerRadius: CornerRadius.lg)
+                        .fill(Color.surfacePrimary)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: CornerRadius.lg)
+                                .stroke(Color.surfaceBorder, lineWidth: 1)
+                        )
+                )
+                .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
+            }
         }
+    }
+
+    private func formatTimeDisplay(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "h:mm"
+        return formatter.string(from: date)
+    }
+
+    private func formatPeriod(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "a"
+        return formatter.string(from: date)
     }
 
     // MARK: - Duration View
@@ -524,6 +658,87 @@ struct AddTimeBlockSheet: View {
                 .fill(Color.surfacePrimary)
                 .overlay(
                     RoundedRectangle(cornerRadius: CornerRadius.md)
+                        .stroke(Color.surfaceBorder, lineWidth: 1)
+                )
+        )
+    }
+
+    // MARK: - Repeat Section
+    private var repeatSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            // Header with toggle
+            HStack {
+                ZStack {
+                    Circle()
+                        .fill(Color.accentWarm.opacity(0.15))
+                        .frame(width: 32, height: 32)
+
+                    Image(systemName: "repeat")
+                        .font(.system(size: 14))
+                        .foregroundColor(.accentWarm)
+                }
+
+                Text("Repeat")
+                    .font(Typography.bodyLarge)
+                    .fontWeight(.medium)
+                    .foregroundColor(.textPrimary)
+
+                Spacer()
+
+                // Toggle
+                ZStack {
+                    Capsule()
+                        .fill(isRecurring ? Color.accentPrimary : Color.surfaceSecondary)
+                        .frame(width: 48, height: 28)
+
+                    Circle()
+                        .fill(Color.white)
+                        .frame(width: 22, height: 22)
+                        .offset(x: isRecurring ? 10 : -10)
+                }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    Haptics.impact(.light)
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        isRecurring.toggle()
+                        if !isRecurring {
+                            selectedDays.removeAll()
+                        }
+                    }
+                }
+            }
+
+            // Day selector (shown when recurring is enabled)
+            if isRecurring {
+                VStack(alignment: .leading, spacing: Spacing.sm) {
+                    Text("REPEAT ON")
+                        .font(Typography.labelSmall)
+                        .foregroundColor(.textMuted)
+                        .tracking(0.5)
+
+                    DaySelector(selectedDays: $selectedDays)
+
+                    // Helper text
+                    HStack(spacing: Spacing.xs) {
+                        Image(systemName: "info.circle")
+                            .font(.system(size: 12))
+                            .foregroundColor(.textMuted)
+
+                        Text("Creates blocks for next 12 weeks")
+                            .font(Typography.bodySmall)
+                            .foregroundColor(.textMuted)
+                    }
+                    .padding(.top, Spacing.xs)
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .padding(Spacing.base)
+        .background(
+            RoundedRectangle(cornerRadius: CornerRadius.lg)
+                .fill(Color.surfacePrimary)
+                .overlay(
+                    RoundedRectangle(cornerRadius: CornerRadius.lg)
                         .stroke(Color.surfaceBorder, lineWidth: 1)
                 )
         )
@@ -744,90 +959,229 @@ struct AddTimeBlockSheet: View {
 
     // MARK: - Add/Save Block Button
     private var addBlockButton: some View {
-        VStack {
-            Spacer()
+        HStack(spacing: Spacing.sm) {
+            Image(systemName: "checkmark")
+                .font(.system(size: 16, weight: .semibold))
 
-            HStack(spacing: Spacing.sm) {
-                Image(systemName: "checkmark")
-                    .font(.system(size: 16, weight: .semibold))
+            Text(isEditMode ? "Save Changes" : "Add Block")
+                .font(Typography.bodyLarge)
+                .fontWeight(.semibold)
+        }
+        .foregroundColor(isValidBlock ? .white : .textMuted)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, Spacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: CornerRadius.lg)
+                .fill(isValidBlock ? Color.accentPrimary : Color.surfaceSecondary)
+        )
+        .padding(.horizontal, Spacing.base)
+        .padding(.bottom, Spacing.xl)
+        .onTapGesture {
+            guard isValidBlock, let priority = selectedPriority else { return }
+            Haptics.impact(.medium)
 
-                Text(isEditMode ? "Save Changes" : "Add Block")
-                    .font(Typography.bodyLarge)
-                    .fontWeight(.semibold)
+            // If editing a recurring block, show confirmation first
+            if isEditMode && isEditingRecurringBlock {
+                showRecurringEditConfirmation = true
+                return
             }
-            .foregroundColor(isValidBlock ? .white : .textMuted)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, Spacing.md)
-            .background(
-                RoundedRectangle(cornerRadius: CornerRadius.lg)
-                    .fill(isValidBlock ? Color.accentPrimary : Color.surfaceSecondary)
+
+            saveBlock(priority: priority, updateAllFuture: false)
+        }
+    }
+
+    /// Save the block (single or all future recurring)
+    private func saveBlock(priority: Priority, updateAllFuture: Bool) {
+        // Normalize times to the effective date (handle midnight end time)
+        let normalizedStart = normalizeToTargetDate(startTime, isEndTime: false)
+        let normalizedEnd = normalizeToTargetDate(endTime, isEndTime: true)
+
+        if isEditMode, let existingBlock = editingBlock {
+            if updateAllFuture && existingBlock.isRecurring {
+                // Update all future recurring blocks
+                timeBlockStore.updateFutureRecurringBlocks(
+                    from: existingBlock,
+                    newPriorityId: priority.id,
+                    newPriorityName: priority.name,
+                    newPriorityColor: priority.color,
+                    newStartTime: normalizedStart,
+                    newEndTime: normalizedEnd,
+                    newEarlyReminders: Array(selectedReminders)
+                )
+            } else {
+                // Update only this block
+                var updatedBlock = TimeBlock(
+                    id: existingBlock.id,
+                    priorityId: priority.id,
+                    priorityName: priority.name,
+                    priorityColor: priority.color,
+                    startTime: normalizedStart,
+                    endTime: normalizedEnd,
+                    earlyReminders: Array(selectedReminders),
+                    createdAt: existingBlock.createdAt
+                )
+                // Clear recurrence info when editing only this one
+                if existingBlock.isRecurring {
+                    updatedBlock.recurrenceId = nil
+                    updatedBlock.recurringDays = nil
+                }
+                timeBlockStore.updateBlock(updatedBlock)
+
+                // Cancel old notifications and schedule new ones
+                NotificationService.shared.cancelTimeBlockNotifications(blockId: existingBlock.id)
+                NotificationService.shared.scheduleTimeBlockNotifications(
+                    blockId: updatedBlock.id,
+                    title: priority.name,
+                    startTime: normalizedStart,
+                    endTime: normalizedEnd,
+                    earlyReminderMinutes: Array(selectedReminders)
+                )
+            }
+        } else if isRecurring && !selectedDays.isEmpty {
+            // Create recurring blocks (notifications handled inside addRecurringBlock)
+            timeBlockStore.addRecurringBlock(
+                priority: priority,
+                startTime: normalizedStart,
+                endTime: normalizedEnd,
+                earlyReminders: Array(selectedReminders),
+                recurringDays: selectedDays
             )
-            .padding(.horizontal, Spacing.base)
-            .padding(.bottom, Spacing.xl)
-            .onTapGesture {
-                guard isValidBlock, let priority = selectedPriority else { return }
-                Haptics.impact(.medium)
+        } else {
+            // Create single new block
+            let block = TimeBlock(
+                priorityId: priority.id,
+                priorityName: priority.name,
+                priorityColor: priority.color,
+                startTime: normalizedStart,
+                endTime: normalizedEnd,
+                earlyReminders: Array(selectedReminders)
+            )
+            timeBlockStore.addBlock(block)
 
-                // Normalize times to the effective date
-                let normalizedStart = normalizeToTargetDate(startTime)
-                let normalizedEnd = normalizeToTargetDate(endTime)
+            // Schedule notifications
+            NotificationService.shared.scheduleTimeBlockNotifications(
+                blockId: block.id,
+                title: priority.name,
+                startTime: normalizedStart,
+                endTime: normalizedEnd,
+                earlyReminderMinutes: Array(selectedReminders)
+            )
+        }
 
-                if isEditMode, let existingBlock = editingBlock {
-                    // Update existing block
-                    let updatedBlock = TimeBlock(
-                        id: existingBlock.id,  // Preserve the original ID
-                        priorityId: priority.id,
-                        priorityName: priority.name,
-                        priorityColor: priority.color,
-                        startTime: normalizedStart,
-                        endTime: normalizedEnd,
-                        earlyReminders: Array(selectedReminders),
-                        createdAt: existingBlock.createdAt  // Preserve original creation date
-                    )
-                    timeBlockStore.updateBlock(updatedBlock)
+        dismiss()
+    }
+}
 
-                    // Cancel old notifications and schedule new ones
-                    NotificationService.shared.cancelTimeBlockNotifications(blockId: existingBlock.id)
-                    NotificationService.shared.scheduleTimeBlockNotifications(
-                        blockId: updatedBlock.id,
-                        title: priority.name,
-                        startTime: normalizedStart,
-                        earlyReminderMinutes: Array(selectedReminders)
-                    )
-                } else {
-                    // Create new block
-                    let block = TimeBlock(
-                        priorityId: priority.id,
-                        priorityName: priority.name,
-                        priorityColor: priority.color,
-                        startTime: normalizedStart,
-                        endTime: normalizedEnd,
-                        earlyReminders: Array(selectedReminders)
-                    )
-                    timeBlockStore.addBlock(block)
+// MARK: - Recurring Edit Confirmation Overlay
+struct RecurringEditConfirmationOverlay: View {
+    let block: TimeBlock?
+    let onCancel: () -> Void
+    let onThisOneOnly: () -> Void
+    let onAllFuture: () -> Void
 
-                    // Schedule notifications
-                    NotificationService.shared.scheduleTimeBlockNotifications(
-                        blockId: block.id,
-                        title: priority.name,
-                        startTime: normalizedStart,
-                        earlyReminderMinutes: Array(selectedReminders)
-                    )
+    @State private var showContent = false
+
+    var body: some View {
+        ZStack {
+            // Backdrop
+            Color.black.opacity(0.6)
+                .ignoresSafeArea()
+                .onTapGesture {
+                    Haptics.impact(.light)
+                    onCancel()
                 }
 
-                dismiss()
+            // Confirmation card
+            VStack(spacing: 0) {
+                Spacer()
+
+                VStack(spacing: Spacing.lg) {
+                    // Icon
+                    ZStack {
+                        Circle()
+                            .fill(Color.accentPrimary.opacity(0.15))
+                            .frame(width: 56, height: 56)
+
+                        Image(systemName: "repeat")
+                            .font(.system(size: 24, weight: .medium))
+                            .foregroundColor(.accentPrimary)
+                    }
+
+                    // Text
+                    VStack(spacing: Spacing.xs) {
+                        Text("Edit Recurring Block")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundColor(.textPrimary)
+
+                        Text("This is part of a recurring series. Which blocks do you want to update?")
+                            .font(Typography.bodyMedium)
+                            .foregroundColor(.textSecondary)
+                            .multilineTextAlignment(.center)
+                    }
+
+                    // Buttons
+                    VStack(spacing: Spacing.sm) {
+                        // This one only
+                        Text("This One Only")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, Spacing.md)
+                            .background(
+                                RoundedRectangle(cornerRadius: CornerRadius.md)
+                                    .fill(Color.accentPrimary)
+                            )
+                            .onTapGesture {
+                                Haptics.impact(.medium)
+                                onThisOneOnly()
+                            }
+
+                        // All future
+                        Text("All Future")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.accentPrimary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, Spacing.md)
+                            .background(
+                                RoundedRectangle(cornerRadius: CornerRadius.md)
+                                    .stroke(Color.accentPrimary, lineWidth: 1.5)
+                            )
+                            .onTapGesture {
+                                Haptics.impact(.medium)
+                                onAllFuture()
+                            }
+
+                        // Cancel button
+                        Image(systemName: "xmark")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.textSecondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, Spacing.md)
+                            .background(
+                                RoundedRectangle(cornerRadius: CornerRadius.md)
+                                    .fill(Color.surfaceSecondary)
+                            )
+                            .onTapGesture {
+                                Haptics.impact(.light)
+                                onCancel()
+                            }
+                    }
+                }
+                .padding(Spacing.xl)
+                .background(
+                    RoundedRectangle(cornerRadius: CornerRadius.xl)
+                        .fill(Color.surfacePrimary)
+                )
+                .padding(.horizontal, Spacing.lg)
+                .padding(.bottom, Spacing.xxxl)
+                .offset(y: showContent ? 0 : 300)
             }
         }
-        .background(
-            LinearGradient(
-                colors: [Color.backgroundPrimary.opacity(0), Color.backgroundPrimary],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .frame(height: 100)
-            .allowsHitTesting(false),
-            alignment: .bottom
-        )
+        .onAppear {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                showContent = true
+            }
+        }
     }
 }
 
@@ -839,21 +1193,15 @@ struct TimeBlockPriorityRow: View {
     let targetDate: Date
     let onTap: () -> Void
 
-    /// Get the start of the week (Monday) for a given date
-    private func startOfWeek(for date: Date) -> Date {
-        var calendar = Calendar.current
-        calendar.firstWeekday = 2 // Monday = 2
-        let components = calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: date)
-        return calendar.date(from: components) ?? date
-    }
-
     /// Determine the week label based on targetDate relative to today
     private var weekLabel: String {
         let calendar = Calendar.current
-        let todayWeekStart = startOfWeek(for: Date())
-        let targetWeekStart = startOfWeek(for: targetDate)
+        let todayWeekStart = Date().startOfWeek()
+        let targetWeekStart = targetDate.startOfWeek()
 
-        let weeksDiff = calendar.dateComponents([.weekOfYear], from: todayWeekStart, to: targetWeekStart).weekOfYear ?? 0
+        // Calculate weeks difference using days (more reliable than weekOfYear)
+        let daysDiff = calendar.dateComponents([.day], from: todayWeekStart, to: targetWeekStart).day ?? 0
+        let weeksDiff = daysDiff / 7
 
         switch weeksDiff {
         case 0:
@@ -913,79 +1261,6 @@ struct TimeBlockPriorityRow: View {
         )
         .contentShape(Rectangle())
         .onTapGesture(perform: onTap)
-    }
-}
-
-// MARK: - Time Picker Button
-struct TimePickerButton: View {
-    @Binding var time: Date
-    @Binding var isEditing: Bool
-    @Binding var otherIsEditing: Bool
-    var accentBorder: Bool = false
-
-    private var hour: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "h"
-        return formatter.string(from: time)
-    }
-
-    private var minute: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "mm"
-        return formatter.string(from: time)
-    }
-
-    private var period: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "a"
-        return formatter.string(from: time)
-    }
-
-    var body: some View {
-        VStack(spacing: Spacing.sm) {
-            HStack(spacing: Spacing.xs) {
-                Text(hour)
-                    .font(.system(size: 32, weight: .medium, design: .default))
-                    .foregroundColor(.textPrimary)
-
-                Text(":")
-                    .font(.system(size: 32, weight: .medium))
-                    .foregroundColor(.textMuted)
-
-                Text(minute)
-                    .font(.system(size: 32, weight: .medium, design: .default))
-                    .foregroundColor(.textPrimary)
-
-                Text(period)
-                    .font(Typography.labelMedium)
-                    .foregroundColor(accentBorder ? .accentPrimary : .textSecondary)
-                    .padding(.leading, Spacing.xs)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, Spacing.md)
-            .background(
-                RoundedRectangle(cornerRadius: CornerRadius.md)
-                    .fill(Color.surfacePrimary)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: CornerRadius.md)
-                            .stroke(accentBorder && isEditing ? Color.accentPrimary : Color.surfaceBorder, lineWidth: accentBorder && isEditing ? 2 : 1)
-                    )
-            )
-            .contentShape(Rectangle())
-            .onTapGesture {
-                Haptics.impact(.light)
-                otherIsEditing = false
-                isEditing.toggle()
-            }
-
-            if isEditing {
-                DatePicker("", selection: $time, displayedComponents: .hourAndMinute)
-                    .datePickerStyle(.wheel)
-                    .labelsHidden()
-                    .frame(height: 150)
-                    .clipped()
-            }
-        }
     }
 }
 

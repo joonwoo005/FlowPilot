@@ -3,7 +3,6 @@ import SwiftUI
 // MARK: - Inbox View
 struct InboxView: View {
     @ObservedObject var taskStore: TaskStore
-    @Binding var showSettings: Bool
     @Binding var showAddTask: Bool
     @Binding var taskToEdit: FlowTask?
     @Binding var addTaskContextDate: Date?
@@ -16,11 +15,13 @@ struct InboxView: View {
     var body: some View {
         NavigationStack {
             ZStack {
+                // Background with orbital glow
                 Color.backgroundPrimary
                     .ignoresSafeArea()
+                OrbitalBackgroundView()
 
                 ScrollView {
-                    LazyVStack(spacing: Spacing.lg) {
+                    LazyVStack(spacing: Spacing.lg, pinnedViews: []) {
                         // Custom header with Inbox title and active counter
                         HStack(alignment: .center) {
                             Text("Inbox")
@@ -29,9 +30,10 @@ struct InboxView: View {
 
                             Spacer()
 
+                            activityLogButton
+
                             activeTasksCounter
                         }
-                        .padding(.top, Spacing.sm)
                         .background(
                             GeometryReader { geo in
                                 Color.clear
@@ -48,8 +50,8 @@ struct InboxView: View {
                             }
                         )
 
-                        // Day-based sections
-                        ForEach(taskStore.tasksByDay) { section in
+                        // Day-based sections with staggered entrance animation
+                        ForEach(Array(taskStore.tasksByDay.enumerated()), id: \.element.id) { index, section in
                             TaskSection(
                                 title: section.title,
                                 titleColor: section.color,
@@ -61,30 +63,27 @@ struct InboxView: View {
                                 },
                                 onEditTask: { task in taskToEdit = task },
                                 date: section.date,
-                                taskToDelete: $taskToDelete
+                                taskToDelete: $taskToDelete,
+                                entranceDelay: Double(index) * 0.08
                             )
                         }
 
-                        // Empty State
-                        if taskStore.activeTasks.isEmpty {
+                        // Empty State (show when no inbox tasks, regardless of project tasks)
+                        if taskStore.tasksByDay.isEmpty {
                             emptyState
                         }
                     }
                     .padding(.horizontal, Spacing.lg)
-                    .padding(.top, Spacing.md)
+                    .padding(.top, Spacing.xs)
                     .padding(.bottom, 100)
                 }
+                .scrollContentBackground(.hidden)
             }
             .navigationBarTitleDisplayMode(.inline)
+            .scrollContentBackground(.hidden)
             .toolbarColorScheme(.dark, for: .navigationBar)
-            .toolbarBackground(Color.backgroundPrimary, for: .navigationBar)
+            .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    HStack(spacing: Spacing.md) {
-                        activityLogButton
-                        settingsButton
-                    }
-                }
                 ToolbarItem(placement: .principal) {
                     Text("Inbox")
                         .font(.system(size: 17, weight: .semibold))
@@ -128,23 +127,46 @@ struct InboxView: View {
     }
 
     // MARK: - Floating Add Button
+    @State private var buttonPulse = false
+
     private var floatingAddButton: some View {
-        Image(systemName: "plus")
-            .font(.system(size: 24, weight: .semibold))
-            .foregroundColor(.white)
-            .frame(width: 56, height: 56)
-            .background(
-                Circle()
-                    .fill(Color.accentPrimary)
-                    .shadow(color: Color.accentPrimary.opacity(0.4), radius: 12, x: 0, y: 6)
-            )
-            .padding(.trailing, Spacing.xl)
-            .padding(.bottom, Spacing.xxl)
-            .onTapGesture {
-                Haptics.impact(.light)
-                addTaskContextDate = nil  // No context date for general add
-                showAddTask = true
+        ZStack {
+            // Outer glow ring
+            Circle()
+                .fill(Color.accentPrimary.opacity(0.15))
+                .frame(width: 72, height: 72)
+                .blur(radius: 8)
+                .scaleEffect(buttonPulse ? 1.1 : 1.0)
+
+            // Button
+            Image(systemName: "plus")
+                .font(.system(size: 24, weight: .semibold))
+                .foregroundColor(.white)
+                .frame(width: 56, height: 56)
+                .background(
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.accentPrimary, Color.accentPrimary.opacity(0.85)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .shadow(color: Color.accentPrimary.opacity(0.5), radius: 16, x: 0, y: 8)
+                )
+        }
+        .padding(.trailing, Spacing.xl)
+        .padding(.bottom, Spacing.xxl)
+        .onTapGesture {
+            Haptics.impact(.light)
+            addTaskContextDate = nil  // No context date for general add
+            showAddTask = true
+        }
+        .onAppear {
+            withAnimation(.easeInOut(duration: 2).repeatForever(autoreverses: true)) {
+                buttonPulse = true
             }
+        }
     }
 
     // MARK: - Active Tasks Counter
@@ -225,16 +247,6 @@ struct InboxView: View {
                 showActivityLog = true
             }
     }
-
-    private var settingsButton: some View {
-        Image(systemName: "gearshape.fill")
-            .font(.system(size: 18))
-            .foregroundColor(.textSecondary)
-            .onTapGesture {
-                Haptics.impact(.light)
-                showSettings = true
-            }
-    }
 }
 
 // MARK: - Task Section
@@ -247,8 +259,10 @@ struct TaskSection: View {
     var onEditTask: ((FlowTask) -> Void)? = nil
     var date: Date? = nil
     @Binding var taskToDelete: FlowTask?
+    var entranceDelay: Double = 0
 
     @State private var isExpanded = true
+    @State private var hasAppeared = false
 
     private var formattedDateSubtitle: String? {
         guard let date = date else { return nil }
@@ -323,12 +337,27 @@ struct TaskSection: View {
         .padding(Spacing.base)
         .background(
             RoundedRectangle(cornerRadius: CornerRadius.lg)
-                .fill(Color.surfacePrimary)
+                .fill(Color.surfacePrimary.opacity(0.85))
                 .overlay(
                     RoundedRectangle(cornerRadius: CornerRadius.lg)
-                        .stroke(Color.surfaceBorder, lineWidth: 1)
+                        .stroke(
+                            LinearGradient(
+                                colors: [titleColor.opacity(0.3), Color.surfaceBorder],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1
+                        )
                 )
+                .shadow(color: titleColor.opacity(0.1), radius: 12, x: 0, y: 4)
         )
+        .opacity(hasAppeared ? 1 : 0)
+        .offset(y: hasAppeared ? 0 : 20)
+        .onAppear {
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.8).delay(entranceDelay)) {
+                hasAppeared = true
+            }
+        }
     }
 
     // MARK: - Add Task Button
@@ -610,7 +639,7 @@ struct DeleteConfirmationOverlay: View {
                             }
 
                         // Cancel button
-                        Text("Cancel")
+                        Image(systemName: "xmark")
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(.textSecondary)
                             .frame(maxWidth: .infinity)
@@ -648,7 +677,6 @@ struct DeleteConfirmationOverlay: View {
 
     return InboxView(
         taskStore: taskStore,
-        showSettings: .constant(false),
         showAddTask: .constant(false),
         taskToEdit: .constant(nil),
         addTaskContextDate: .constant(nil)

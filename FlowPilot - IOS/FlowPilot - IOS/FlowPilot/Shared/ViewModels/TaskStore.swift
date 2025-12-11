@@ -60,27 +60,27 @@ class TaskStore: ObservableObject {
 
     var overdueTasks: [FlowTask] {
         activeTasks.filter { $0.dueStatus == .overdue }
-            .sorted { ($0.dueDate ?? .distantFuture) < ($1.dueDate ?? .distantFuture) }
+            .sorted { ($0.dueDateWithTime ?? .distantFuture) < ($1.dueDateWithTime ?? .distantFuture) }
     }
 
     var todayTasks: [FlowTask] {
         activeTasks.filter { $0.dueStatus == .today }
-            .sorted { ($0.dueDate ?? .distantFuture) < ($1.dueDate ?? .distantFuture) }
+            .sorted { ($0.dueDateWithTime ?? .distantFuture) < ($1.dueDateWithTime ?? .distantFuture) }
     }
 
     var thisWeekTasks: [FlowTask] {
         activeTasks.filter { $0.dueStatus == .thisWeek }
-            .sorted { ($0.dueDate ?? .distantFuture) < ($1.dueDate ?? .distantFuture) }
+            .sorted { ($0.dueDateWithTime ?? .distantFuture) < ($1.dueDateWithTime ?? .distantFuture) }
     }
 
     var nextWeekTasks: [FlowTask] {
         activeTasks.filter { $0.dueStatus == .nextWeek }
-            .sorted { ($0.dueDate ?? .distantFuture) < ($1.dueDate ?? .distantFuture) }
+            .sorted { ($0.dueDateWithTime ?? .distantFuture) < ($1.dueDateWithTime ?? .distantFuture) }
     }
 
     var laterTasks: [FlowTask] {
         activeTasks.filter { $0.dueStatus == .later }
-            .sorted { ($0.dueDate ?? .distantFuture) < ($1.dueDate ?? .distantFuture) }
+            .sorted { ($0.dueDateWithTime ?? .distantFuture) < ($1.dueDateWithTime ?? .distantFuture) }
     }
 
     var undatedTasks: [FlowTask] {
@@ -95,31 +95,39 @@ class TaskStore: ObservableObject {
 
     /// Tasks grouped by individual days for display (sorted by date)
     /// Order: Overdue -> Not set (undated) -> Today -> Future days
+    /// NOTE: Only shows tasks NOT assigned to a project (Inbox tasks)
     var tasksByDay: [DaySection] {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
 
+        // Filter to only inbox tasks (no project assignment)
+        let inboxTasks = tasksWithoutProject
+
         var result: [DaySection] = []
 
         // Add overdue section first (all overdue tasks grouped together)
-        if !overdueTasks.isEmpty {
-            result.append(DaySection(date: nil, title: "Overdue", color: .dueDateOverdue, tasks: overdueTasks))
+        let inboxOverdue = inboxTasks.filter { $0.dueStatus == .overdue }
+            .sorted { ($0.dueDateWithTime ?? .distantFuture) < ($1.dueDateWithTime ?? .distantFuture) }
+        if !inboxOverdue.isEmpty {
+            result.append(DaySection(date: nil, title: "Overdue", color: .dueDateOverdue, tasks: inboxOverdue))
         }
 
         // Add undated tasks right after overdue
-        if !undatedTasks.isEmpty {
-            result.append(DaySection(date: nil, title: "Not set", color: .textMuted, tasks: undatedTasks))
+        let inboxUndated = inboxTasks.filter { $0.dueStatus == .noDueDate }
+            .sorted { $0.createdAt > $1.createdAt }
+        if !inboxUndated.isEmpty {
+            result.append(DaySection(date: nil, title: "Not set", color: .textMuted, tasks: inboxUndated))
         }
 
         // Group non-overdue dated tasks by day
-        let futureDated = activeTasks.filter { $0.dueDate != nil && $0.dueStatus != .overdue }
+        let futureDated = inboxTasks.filter { $0.dueDate != nil && $0.dueStatus != .overdue }
         let grouped = Dictionary(grouping: futureDated) { task -> Date in
             calendar.startOfDay(for: task.dueDate!)
         }
 
         let sortedDates = grouped.keys.sorted()
         result += sortedDates.map { date in
-            let tasks = grouped[date]!.sorted { ($0.dueDate ?? .distantFuture) < ($1.dueDate ?? .distantFuture) }
+            let tasks = grouped[date]!.sorted { ($0.dueDateWithTime ?? .distantFuture) < ($1.dueDateWithTime ?? .distantFuture) }
             let title = dayTitle(for: date)
             let color = dayColor(for: date, relativeTo: today)
             return DaySection(date: date, title: title, color: color, tasks: tasks)
@@ -144,9 +152,11 @@ class TaskStore: ObservableObject {
         }
     }
 
-    /// Get display title for a day (e.g., "Today", "Tomorrow", "Sunday")
+    /// Get display title for a day (e.g., "Today", "Tomorrow", "Sunday", "Next Monday")
     private func dayTitle(for date: Date) -> String {
         let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let startOfDate = calendar.startOfDay(for: date)
 
         if calendar.isDateInToday(date) {
             return "Today"
@@ -157,7 +167,16 @@ class TaskStore: ObservableObject {
         } else {
             let formatter = DateFormatter()
             formatter.dateFormat = "EEEE"
-            return formatter.string(from: date)
+            let dayName = formatter.string(from: date)
+
+            // Check if date is in "next week" range (7-13 days from today)
+            if let weekFromNow = calendar.date(byAdding: .day, value: 7, to: today),
+               let twoWeeksFromNow = calendar.date(byAdding: .day, value: 14, to: today),
+               startOfDate >= weekFromNow && startOfDate < twoWeeksFromNow {
+                return "Next \(dayName)"
+            }
+
+            return dayName
         }
     }
 
@@ -204,10 +223,11 @@ class TaskStore: ObservableObject {
 
     // MARK: - Task Actions
 
-    func addTask(name: String, dueDate: Date? = nil, priority: Priority? = nil, timeBlockId: UUID? = nil) {
+    func addTask(name: String, dueDate: Date? = nil, dueTime: DueTime? = nil, priority: Priority? = nil, timeBlockId: UUID? = nil) {
         let task = FlowTask(
             name: name,
             dueDate: dueDate,
+            dueTime: dueTime,
             priority: priority,
             timeBlockId: timeBlockId
         )
@@ -219,11 +239,11 @@ class TaskStore: ObservableObject {
         logActivity(taskId: task.id, taskName: task.name, action: .created)
 
         // Schedule notification for tasks with due time but not assigned to a block
-        if let dueDate = dueDate, timeBlockId == nil {
+        if let dueDateTime = task.dueDateWithTime, dueTime != nil, timeBlockId == nil {
             NotificationService.shared.scheduleTaskNotification(
                 taskId: task.id,
                 taskName: task.name,
-                dueDate: dueDate
+                dueDate: dueDateTime
             )
         }
 
@@ -247,6 +267,35 @@ class TaskStore: ObservableObject {
             .sorted { $0.createdAt < $1.createdAt }
     }
 
+    // MARK: - Tasks by Project
+
+    /// Tasks that are NOT assigned to any project (for Browse priority sections)
+    var tasksWithoutProject: [FlowTask] {
+        activeTasks.filter { $0.projectId == nil }
+    }
+
+    /// Active tasks for a specific project
+    func tasksForProject(_ projectId: UUID) -> [FlowTask] {
+        activeTasks.filter { $0.projectId == projectId }
+            .sorted { $0.createdAt < $1.createdAt }
+    }
+
+    /// Active tasks for a specific priority (without project assignment)
+    func tasksForPriority(_ priorityId: UUID) -> [FlowTask] {
+        tasksWithoutProject.filter { $0.priority?.id == priorityId }
+            .sorted { ($0.dueDateWithTime ?? .distantFuture) < ($1.dueDateWithTime ?? .distantFuture) }
+    }
+
+    // MARK: - Search
+
+    /// Search tasks by name (case-insensitive)
+    func searchTasks(query: String) -> [FlowTask] {
+        guard !query.isEmpty else { return [] }
+        let lowercasedQuery = query.lowercased()
+        return tasks.filter { $0.name.lowercased().contains(lowercasedQuery) }
+            .sorted { !$0.isCompleted && $1.isCompleted }
+    }
+
     func toggleComplete(_ task: FlowTask) {
         guard let index = tasks.firstIndex(where: { $0.id == task.id }) else { return }
 
@@ -258,12 +307,12 @@ class TaskStore: ObservableObject {
             }
             pendingCompletions.removeValue(forKey: task.id)
 
-            // Reschedule notification if task has due date and no time block
-            if let dueDate = task.dueDate, task.timeBlockId == nil {
+            // Reschedule notification if task has due date with time and no time block
+            if let dueDateTime = task.dueDateWithTime, task.dueTime != nil, task.timeBlockId == nil {
                 NotificationService.shared.scheduleTaskNotification(
                     taskId: task.id,
                     taskName: task.name,
-                    dueDate: dueDate
+                    dueDate: dueDateTime
                 )
             }
 
@@ -340,12 +389,12 @@ class TaskStore: ObservableObject {
             tasks[index].completedAt = nil
         }
 
-        // Reschedule notification if task has due date and no time block
-        if let dueDate = task.dueDate, task.timeBlockId == nil {
+        // Reschedule notification if task has due date with time and no time block
+        if let dueDateTime = task.dueDateWithTime, task.dueTime != nil, task.timeBlockId == nil {
             NotificationService.shared.scheduleTaskNotification(
                 taskId: task.id,
                 taskName: task.name,
-                dueDate: dueDate
+                dueDate: dueDateTime
             )
         }
     }
@@ -369,6 +418,28 @@ class TaskStore: ObservableObject {
         }
     }
 
+    func deleteAllTasks() {
+        // Cancel all scheduled notifications
+        for task in tasks {
+            NotificationService.shared.cancelTaskNotification(taskId: task.id)
+        }
+
+        // Delete all from Firestore
+        if let userId = userId {
+            Task {
+                for task in tasks {
+                    try? await TaskRepository.shared.deleteTask(taskId: task.id, userId: userId)
+                }
+            }
+        }
+
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+            tasks.removeAll()
+        }
+        pendingCompletions.removeAll()
+        activityLog.removeAll()
+    }
+
     func updateTask(_ task: FlowTask) {
         if let index = tasks.firstIndex(where: { $0.id == task.id }) {
             tasks[index] = task
@@ -376,11 +447,11 @@ class TaskStore: ObservableObject {
 
         // Update notification: cancel existing, schedule new if applicable
         NotificationService.shared.cancelTaskNotification(taskId: task.id)
-        if let dueDate = task.dueDate, task.timeBlockId == nil, !task.isCompleted {
+        if let dueDateTime = task.dueDateWithTime, task.dueTime != nil, task.timeBlockId == nil, !task.isCompleted {
             NotificationService.shared.scheduleTaskNotification(
                 taskId: task.id,
                 taskName: task.name,
-                dueDate: dueDate
+                dueDate: dueDateTime
             )
         }
 

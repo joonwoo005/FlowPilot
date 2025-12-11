@@ -49,6 +49,8 @@ class SmartTextParser {
         let dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"]
         let shortDayNames = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"]
         let monthNames = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]
+        let fullMonthNames = ["january", "february", "march", "april", "may", "june",
+                              "july", "august", "september", "october", "november", "december"]
 
         // Helper to get integer offsets from range
         func offsets(of range: Range<String.Index>) -> (start: Int, end: Int) {
@@ -149,19 +151,25 @@ class SmartTextParser {
         }
 
         // "[month] [day]" e.g., "Dec 4", "Dec 4th", "December 1st"
-        if let regex = try? NSRegularExpression(pattern: "(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\\s+(\\d{1,2})(?:st|nd|rd|th)?", options: .caseInsensitive),
+        if let regex = try? NSRegularExpression(pattern: "(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\\s+(\\d{1,2})(?:st|nd|rd|th)?", options: .caseInsensitive),
            let match = regex.firstMatch(in: lowercased, options: [], range: NSRange(lowercased.startIndex..., in: lowercased)),
            let monthRange = Range(match.range(at: 1), in: lowercased),
            let dayRange = Range(match.range(at: 2), in: lowercased),
            let fullRange = Range(match.range, in: lowercased) {
-            let monthStr = String(lowercased[monthRange]).prefix(3).lowercased()
+            let monthStr = String(lowercased[monthRange]).lowercased()
             let dayStr = String(lowercased[dayRange])
-            if let monthIndex = monthNames.firstIndex(of: monthStr),
+            // Check full month name first, then short form
+            let monthIndex = fullMonthNames.firstIndex(of: monthStr) ?? monthNames.firstIndex(of: String(monthStr.prefix(3)))
+            if let monthIndex = monthIndex,
                let day = extractDay(from: dayStr) {
                 var components = DateComponents()
                 components.month = monthIndex + 1
                 components.day = day
                 components.year = calendar.component(.year, from: today)
+                // If date is in the past, roll forward to next year
+                if let tempDate = calendar.date(from: components), tempDate < today {
+                    components.year! += 1
+                }
                 if let date = calendar.date(from: components) {
                     let formatter = DateFormatter()
                     formatter.dateFormat = "MMM d"
@@ -172,19 +180,25 @@ class SmartTextParser {
         }
 
         // "[day] [month]" e.g., "4 Dec", "4th Dec", "1st December"
-        if let regex = try? NSRegularExpression(pattern: "(\\d{1,2})(?:st|nd|rd|th)?\\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*", options: .caseInsensitive),
+        if let regex = try? NSRegularExpression(pattern: "(\\d{1,2})(?:st|nd|rd|th)?\\s+(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)", options: .caseInsensitive),
            let match = regex.firstMatch(in: lowercased, options: [], range: NSRange(lowercased.startIndex..., in: lowercased)),
            let dayRange = Range(match.range(at: 1), in: lowercased),
            let monthRange = Range(match.range(at: 2), in: lowercased),
            let fullRange = Range(match.range, in: lowercased) {
             let dayStr = String(lowercased[dayRange])
-            let monthStr = String(lowercased[monthRange]).prefix(3).lowercased()
-            if let monthIndex = monthNames.firstIndex(of: monthStr),
+            let monthStr = String(lowercased[monthRange]).lowercased()
+            // Check full month name first, then short form
+            let monthIndex = fullMonthNames.firstIndex(of: monthStr) ?? monthNames.firstIndex(of: String(monthStr.prefix(3)))
+            if let monthIndex = monthIndex,
                let day = extractDay(from: dayStr) {
                 var components = DateComponents()
                 components.month = monthIndex + 1
                 components.day = day
                 components.year = calendar.component(.year, from: today)
+                // If date is in the past, roll forward to next year
+                if let tempDate = calendar.date(from: components), tempDate < today {
+                    components.year! += 1
+                }
                 if let date = calendar.date(from: components) {
                     let formatter = DateFormatter()
                     formatter.dateFormat = "MMM d"
@@ -623,6 +637,24 @@ struct AddTaskSheet: View {
                 try? await Task.sleep(nanoseconds: 600_000_000)
                 await MainActor.run { timeJustDetected = false }
             }
+
+            // Auto-set date when time is detected without a date
+            if detectedComponents.dateValue == nil && manualDate == nil && activeBlock == nil {
+                if let timeValue = detectedComponents.timeValue,
+                   let hour = timeValue.hour,
+                   let minute = timeValue.minute {
+                    let calendar = Calendar.current
+                    let now = Date()
+                    let currentHour = calendar.component(.hour, from: now)
+                    let currentMinute = calendar.component(.minute, from: now)
+
+                    // Compare time: if detected time is after current time, use today; otherwise tomorrow
+                    let isTimeInFuture = (hour > currentHour) || (hour == currentHour && minute > currentMinute)
+                    let targetDate = isTimeInFuture ? calendar.startOfDay(for: now) : calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now))
+
+                    manualDate = targetDate
+                }
+            }
         }
         if !hadPriority && detectedComponents.priorityText != nil {
             priorityJustDetected = true
@@ -943,16 +975,11 @@ struct AddTaskSheet: View {
                     taskName = task.name
 
                     // Pre-fill date
-                    if let dueDate = task.dueDate {
-                        let calendar = Calendar.current
-                        manualDate = calendar.startOfDay(for: dueDate)
+                    manualDate = task.dueDate
 
-                        // Pre-fill time if dueDate has time component
-                        let hour = calendar.component(.hour, from: dueDate)
-                        let minute = calendar.component(.minute, from: dueDate)
-                        if hour != 0 || minute != 0 {
-                            manualTime = DateComponents(hour: hour, minute: minute)
-                        }
+                    // Pre-fill time (now separate field)
+                    if let time = task.dueTime {
+                        manualTime = time.asDateComponents
                     }
 
                     // Pre-fill priority
@@ -979,7 +1006,24 @@ struct AddTaskSheet: View {
                 // Check if the new date/time combination falls within a time block
                 checkForCoincidingBlock()
             }
-            .onChange(of: manualTime) { _, _ in
+            .onChange(of: manualTime) { _, newTime in
+                // Auto-set date when time is manually selected without a date
+                if let time = newTime,
+                   displayDate.value == nil && activeBlock == nil,
+                   let hour = time.hour,
+                   let minute = time.minute {
+                    let calendar = Calendar.current
+                    let now = Date()
+                    let currentHour = calendar.component(.hour, from: now)
+                    let currentMinute = calendar.component(.minute, from: now)
+
+                    // If time is after current time, use today; otherwise tomorrow
+                    let isTimeInFuture = (hour > currentHour) || (hour == currentHour && minute > currentMinute)
+                    let targetDate = isTimeInFuture ? calendar.startOfDay(for: now) : calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now))
+
+                    manualDate = targetDate
+                }
+
                 // Check if the new date/time combination falls within a time block
                 checkForCoincidingBlock()
             }
@@ -1041,19 +1085,17 @@ struct AddTaskSheet: View {
         // Hide error if it was showing
         showNoDescriptionError = false
 
-        // Combine date and time
-        var finalDate = displayDate.value
-        if let date = finalDate, let time = displayTime.value {
-            let calendar = Calendar.current
-            var components = calendar.dateComponents([.year, .month, .day], from: date)
-            components.hour = time.hour
-            components.minute = time.minute
-            finalDate = calendar.date(from: components)
+        // Get date and time separately
+        let finalDate = displayDate.value
+        let finalTime: DueTime? = displayTime.value.flatMap { components in
+            guard let hour = components.hour else { return nil }
+            return DueTime(hour: hour, minute: components.minute ?? 0)
         }
 
         taskStore.addTask(
             name: cleanedName,
             dueDate: finalDate,
+            dueTime: finalTime,
             priority: displayPriority.value,
             timeBlockId: activeBlock?.id
         )
@@ -1080,20 +1122,18 @@ struct AddTaskSheet: View {
 
         showNoDescriptionError = false
 
-        // Combine date and time
-        var finalDate = displayDate.value
-        if let date = finalDate, let time = displayTime.value {
-            let calendar = Calendar.current
-            var components = calendar.dateComponents([.year, .month, .day], from: date)
-            components.hour = time.hour
-            components.minute = time.minute
-            finalDate = calendar.date(from: components)
+        // Get date and time separately
+        let finalDate = displayDate.value
+        let finalTime: DueTime? = displayTime.value.flatMap { components in
+            guard let hour = components.hour else { return nil }
+            return DueTime(hour: hour, minute: components.minute ?? 0)
         }
 
         // Create updated task preserving original properties
         var updatedTask = originalTask
         updatedTask.name = cleanedName
         updatedTask.dueDate = finalDate
+        updatedTask.dueTime = finalTime
         updatedTask.priority = displayPriority.value
         updatedTask.timeBlockId = activeBlock?.id
 
@@ -1447,7 +1487,7 @@ struct TimeBlockPickerSheet: View {
         var weekGroups: [(weekStart: Date, weekLabel: String, days: [(date: Date, blocks: [TimeBlock])])] = []
 
         for dayGroup in sortedDays {
-            let weekStart = startOfWeek(for: dayGroup.date)
+            let weekStart = dayGroup.date.startOfWeek()
             let weekLabel = formatWeekLabel(for: dayGroup.date)
 
             if let lastIndex = weekGroups.lastIndex(where: { $0.weekStart == weekStart }) {
@@ -1460,20 +1500,14 @@ struct TimeBlockPickerSheet: View {
         return weekGroups.map { (weekLabel: $0.weekLabel, days: $0.days) }
     }
 
-    /// Get the start of the week (Monday) for a given date
-    private func startOfWeek(for date: Date) -> Date {
-        var calendar = Calendar.current
-        calendar.firstWeekday = 2 // Monday = 2
-        let components = calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: date)
-        return calendar.date(from: components) ?? date
-    }
-
     private func formatWeekLabel(for date: Date) -> String {
         let calendar = Calendar.current
-        let todayWeekStart = startOfWeek(for: Date())
-        let targetWeekStart = startOfWeek(for: date)
+        let todayWeekStart = Date().startOfWeek()
+        let targetWeekStart = date.startOfWeek()
 
-        let weeksDiff = calendar.dateComponents([.weekOfYear], from: todayWeekStart, to: targetWeekStart).weekOfYear ?? 0
+        // Calculate weeks difference using days (more reliable than weekOfYear)
+        let daysDiff = calendar.dateComponents([.day], from: todayWeekStart, to: targetWeekStart).day ?? 0
+        let weeksDiff = daysDiff / 7
 
         switch weeksDiff {
         case 0:

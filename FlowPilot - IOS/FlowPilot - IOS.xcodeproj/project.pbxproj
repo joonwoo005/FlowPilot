@@ -7,26 +7,250 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		F00EE4242EE812B400850F8E /* DaySelector.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00EE4232EE812B400850F8E /* DaySelector.swift */; };
+		F00EE42D2EE9A55F00850F8E /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F0961B092EE3CCE1001B7D83 /* WidgetKit.framework */; };
+		F00EE42E2EE9A55F00850F8E /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F0961B0B2EE3CCE1001B7D83 /* SwiftUI.framework */; };
+		F00EE43C2EE9A56000850F8E /* FlowPilotMacWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F00EE42C2EE9A55F00850F8E /* FlowPilotMacWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		F01135B12EE3E85F00CF6A9E /* OnboardingAllocateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F01135A32EE3E85F00CF6A9E /* OnboardingAllocateView.swift */; };
+		F01135B22EE3E85F00CF6A9E /* OnboardingNameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F01135A52EE3E85F00CF6A9E /* OnboardingNameView.swift */; };
+		F01135B32EE3E85F00CF6A9E /* AddTimeBlockSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F01135A92EE3E85F00CF6A9E /* AddTimeBlockSheet.swift */; };
+		F01135B42EE3E85F00CF6A9E /* CalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F01135AA2EE3E85F00CF6A9E /* CalendarView.swift */; };
+		F01135B52EE3E85F00CF6A9E /* AddTaskSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F011359F2EE3E85F00CF6A9E /* AddTaskSheet.swift */; };
+		F01135B62EE3E85F00CF6A9E /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F01135972EE3E85F00CF6A9E /* LoginView.swift */; };
+		F01135B72EE3E85F00CF6A9E /* FlowPilotmacOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F01135912EE3E85F00CF6A9E /* FlowPilotmacOSApp.swift */; };
+		F01135B82EE3E85F00CF6A9E /* OnboardingPrioritiesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F01135A62EE3E85F00CF6A9E /* OnboardingPrioritiesView.swift */; };
+		F01135B92EE3E85F00CF6A9E /* OnboardingSleepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F01135A72EE3E85F00CF6A9E /* OnboardingSleepView.swift */; };
+		F01135BA2EE3E85F00CF6A9E /* MainSplitView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F01135932EE3E85F00CF6A9E /* MainSplitView.swift */; };
+		F01135BB2EE3E85F00CF6A9E /* BrowseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F01135992EE3E85F00CF6A9E /* BrowseView.swift */; };
+		F01135BC2EE3E85F00CF6A9E /* ConstellationProgressBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F011359B2EE3E85F00CF6A9E /* ConstellationProgressBar.swift */; };
+		F01135BD2EE3E85F00CF6A9E /* ActivityLogSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F011359E2EE3E85F00CF6A9E /* ActivityLogSheet.swift */; };
+		F01135BE2EE3E85F00CF6A9E /* EditTaskSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F01135A02EE3E85F00CF6A9E /* EditTaskSheet.swift */; };
+		F01135BF2EE3E85F00CF6A9E /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F01135AD2EE3E85F00CF6A9E /* SettingsView.swift */; };
+		F01135C02EE3E85F00CF6A9E /* Typography+macOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = F01135952EE3E85F00CF6A9E /* Typography+macOS.swift */; };
+		F01135C12EE3E85F00CF6A9E /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F01135AB2EE3E85F00CF6A9E /* TodayView.swift */; };
+		F01135C22EE3E85F00CF6A9E /* PrimaryButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = F011359C2EE3E85F00CF6A9E /* PrimaryButton.swift */; };
+		F01135C32EE3E85F00CF6A9E /* InboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F01135A12EE3E85F00CF6A9E /* InboxView.swift */; };
+		F01135C42EE3E85F00CF6A9E /* OnboardingContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F01135A42EE3E85F00CF6A9E /* OnboardingContainerView.swift */; };
+		F01135E42EE3EA7800CF6A9E /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = F01135E32EE3EA7800CF6A9E /* FirebaseFirestore */; };
+		F01135E62EE3EA7D00CF6A9E /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = F01135E52EE3EA7D00CF6A9E /* FirebaseAuth */; };
+		F01135E82EE3EA8100CF6A9E /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = F01135E72EE3EA8100CF6A9E /* GoogleSignIn */; };
+		F01135EA2EE3EA8100CF6A9E /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = F01135E92EE3EA8100CF6A9E /* GoogleSignInSwift */; };
 		F044F3922EE2D37F009B8205 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = F044F3912EE2D37F009B8205 /* GoogleSignIn */; };
 		F044F3942EE2D37F009B8205 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = F044F3932EE2D37F009B8205 /* GoogleSignInSwift */; };
 		F044F3962EE2D400009B8205 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = F044F3972EE2D400009B8205 /* FirebaseAuth */; };
 		F044F3982EE2D400009B8205 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = F044F3992EE2D400009B8205 /* FirebaseCore */; };
 		F044F39A2EE2D400009B8205 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = F044F39B2EE2D400009B8205 /* FirebaseFirestore */; };
+		F0961B1D2EE3CCE2001B7D83 /* FlowPilotWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F0961B532EE3CF1B001B7D83 /* FlowPilotWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		F0961B542EE3CF1B001B7D83 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F0961B092EE3CCE1001B7D83 /* WidgetKit.framework */; };
+		F0961B552EE3CF1B001B7D83 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F0961B0B2EE3CCE1001B7D83 /* SwiftUI.framework */; };
+		F0CC00072EE3E86000CF6A9E /* CustomCalendarPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0CC00012EE3E86000CF6A9E /* CustomCalendarPicker.swift */; };
+		F0CC00082EE3E86000CF6A9E /* CustomDateInput.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0CC00022EE3E86000CF6A9E /* CustomDateInput.swift */; };
+		F0CC00092EE3E86000CF6A9E /* CustomPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0CC00032EE3E86000CF6A9E /* CustomPicker.swift */; };
+		F0CC000A2EE3E86000CF6A9E /* CustomSlider.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0CC00042EE3E86000CF6A9E /* CustomSlider.swift */; };
+		F0CC000B2EE3E86000CF6A9E /* CustomTextField.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0CC00052EE3E86000CF6A9E /* CustomTextField.swift */; };
+		F0CC000C2EE3E86000CF6A9E /* CustomTimeInput.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0CC00062EE3E86000CF6A9E /* CustomTimeInput.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		F00EE4392EE9A56000850F8E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F044F1DF2EE28CD5009B8205 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F00EE42B2EE9A55F00850F8E;
+			remoteInfo = FlowPilotMacWidgetExtension;
+		};
+		F0961B602EE3CF1C001B7D83 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F044F1DF2EE28CD5009B8205 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F0961B522EE3CF1B001B7D83;
+			remoteInfo = FlowPilotWidgetExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		F00EE43B2EE9A56000850F8E /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				F00EE43C2EE9A56000850F8E /* FlowPilotMacWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F0961B222EE3CCE2001B7D83 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				F0961B1D2EE3CCE2001B7D83 /* FlowPilotWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		F00EE4232EE812B400850F8E /* DaySelector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DaySelector.swift; sourceTree = "<group>"; };
+		F00EE42C2EE9A55F00850F8E /* FlowPilotMacWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = FlowPilotMacWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		F01135862EE3E82F00CF6A9E /* FlowPilot - Mac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "FlowPilot - Mac.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		F01135912EE3E85F00CF6A9E /* FlowPilotmacOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowPilotmacOSApp.swift; sourceTree = "<group>"; };
+		F01135932EE3E85F00CF6A9E /* MainSplitView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainSplitView.swift; sourceTree = "<group>"; };
+		F01135952EE3E85F00CF6A9E /* Typography+macOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Typography+macOS.swift"; sourceTree = "<group>"; };
+		F01135972EE3E85F00CF6A9E /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		F01135992EE3E85F00CF6A9E /* BrowseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowseView.swift; sourceTree = "<group>"; };
+		F011359B2EE3E85F00CF6A9E /* ConstellationProgressBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConstellationProgressBar.swift; sourceTree = "<group>"; };
+		F011359C2EE3E85F00CF6A9E /* PrimaryButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrimaryButton.swift; sourceTree = "<group>"; };
+		F011359E2EE3E85F00CF6A9E /* ActivityLogSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityLogSheet.swift; sourceTree = "<group>"; };
+		F011359F2EE3E85F00CF6A9E /* AddTaskSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddTaskSheet.swift; sourceTree = "<group>"; };
+		F01135A02EE3E85F00CF6A9E /* EditTaskSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditTaskSheet.swift; sourceTree = "<group>"; };
+		F01135A12EE3E85F00CF6A9E /* InboxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InboxView.swift; sourceTree = "<group>"; };
+		F01135A32EE3E85F00CF6A9E /* OnboardingAllocateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingAllocateView.swift; sourceTree = "<group>"; };
+		F01135A42EE3E85F00CF6A9E /* OnboardingContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingContainerView.swift; sourceTree = "<group>"; };
+		F01135A52EE3E85F00CF6A9E /* OnboardingNameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingNameView.swift; sourceTree = "<group>"; };
+		F01135A62EE3E85F00CF6A9E /* OnboardingPrioritiesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingPrioritiesView.swift; sourceTree = "<group>"; };
+		F01135A72EE3E85F00CF6A9E /* OnboardingSleepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingSleepView.swift; sourceTree = "<group>"; };
+		F01135A92EE3E85F00CF6A9E /* AddTimeBlockSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddTimeBlockSheet.swift; sourceTree = "<group>"; };
+		F01135AA2EE3E85F00CF6A9E /* CalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarView.swift; sourceTree = "<group>"; };
+		F01135AB2EE3E85F00CF6A9E /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
+		F01135AD2EE3E85F00CF6A9E /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		F044F1E72EE28CD5009B8205 /* FlowPilot - IOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "FlowPilot - IOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		F0961B092EE3CCE1001B7D83 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		F0961B0B2EE3CCE1001B7D83 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		F0961B532EE3CF1B001B7D83 /* FlowPilotWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = FlowPilotWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		F0CC00012EE3E86000CF6A9E /* CustomCalendarPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomCalendarPicker.swift; sourceTree = "<group>"; };
+		F0CC00022EE3E86000CF6A9E /* CustomDateInput.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomDateInput.swift; sourceTree = "<group>"; };
+		F0CC00032EE3E86000CF6A9E /* CustomPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomPicker.swift; sourceTree = "<group>"; };
+		F0CC00042EE3E86000CF6A9E /* CustomSlider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomSlider.swift; sourceTree = "<group>"; };
+		F0CC00052EE3E86000CF6A9E /* CustomTextField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomTextField.swift; sourceTree = "<group>"; };
+		F0CC00062EE3E86000CF6A9E /* CustomTimeInput.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomTimeInput.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		F00EE4252EE8281400850F8E /* Exceptions for "FlowPilot - Mac" folder in "FlowPilot - Mac" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = F01135852EE3E82F00CF6A9E /* FlowPilot - Mac */;
+		};
+		F00EE4402EE9A56000850F8E /* Exceptions for "FlowPilotMacWidget" folder in "FlowPilotMacWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = F00EE42B2EE9A55F00850F8E /* FlowPilotMacWidgetExtension */;
+		};
+		F00EE52D2EEAE84400850F8E /* Exceptions for "FlowPilotWidget" folder in "FlowPilot - IOS" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				LiveActivity/TimeBlockActivityAttributes.swift,
+			);
+			target = F044F1E62EE28CD5009B8205 /* FlowPilot - IOS */;
+		};
+		F01135E02EE3E95000CF6A9E /* Exceptions for "FlowPilot - IOS" folder in "FlowPilot - Mac" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				FlowPilot/Shared/Models/Domain/CalendarSyncSettings.swift,
+				FlowPilot/Shared/Models/Domain/Priority.swift,
+				FlowPilot/Shared/Models/Domain/Project.swift,
+				FlowPilot/Shared/Models/Domain/SleepSchedule.swift,
+				FlowPilot/Shared/Models/Domain/Task.swift,
+				FlowPilot/Shared/Models/Domain/TimeBlock.swift,
+				FlowPilot/Shared/Models/State/OnboardingState.swift,
+				FlowPilot/Shared/Resources/completion_sound.mp3,
+				FlowPilot/Shared/Services/ActivityLogRepository.swift,
+				FlowPilot/Shared/Services/AuthService.swift,
+				FlowPilot/Shared/Services/CalendarService.swift,
+				FlowPilot/Shared/Services/FirebaseConfig.swift,
+				FlowPilot/Shared/Services/NotificationService.swift,
+				FlowPilot/Shared/Services/PriorityRepository.swift,
+				FlowPilot/Shared/Services/ProjectRepository.swift,
+				FlowPilot/Shared/Services/SoundService.swift,
+				FlowPilot/Shared/Services/TaskRepository.swift,
+				FlowPilot/Shared/Services/TimeBlockRepository.swift,
+				FlowPilot/Shared/Services/UserRepository.swift,
+				FlowPilot/Shared/Theme/Colors.swift,
+				FlowPilot/Shared/Theme/CornerRadius.swift,
+				FlowPilot/Shared/Theme/Haptics.swift,
+				FlowPilot/Shared/Theme/Spacing.swift,
+				"FlowPilot/Shared/Utilities/Date+Extensions.swift",
+				FlowPilot/Shared/ViewModels/ProjectStore.swift,
+				FlowPilot/Shared/ViewModels/TaskStore.swift,
+				FlowPilot/Shared/ViewModels/TimeBlockStore.swift,
+				"GoogleService-Info.plist",
+			);
+			target = F01135852EE3E82F00CF6A9E /* FlowPilot - Mac */;
+		};
+		F0961B622EE3CF1C001B7D83 /* Exceptions for "FlowPilotWidget" folder in "FlowPilotWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = F0961B522EE3CF1B001B7D83 /* FlowPilotWidgetExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		F00EE42F2EE9A55F00850F8E /* FlowPilotMacWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				F00EE4402EE9A56000850F8E /* Exceptions for "FlowPilotMacWidget" folder in "FlowPilotMacWidgetExtension" target */,
+			);
+			path = FlowPilotMacWidget;
+			sourceTree = "<group>";
+		};
+		F01135872EE3E82F00CF6A9E /* FlowPilot - Mac */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				F00EE4252EE8281400850F8E /* Exceptions for "FlowPilot - Mac" folder in "FlowPilot - Mac" target */,
+			);
+			path = "FlowPilot - Mac";
+			sourceTree = "<group>";
+		};
 		F044F1E92EE28CD5009B8205 /* FlowPilot - IOS */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				F01135E02EE3E95000CF6A9E /* Exceptions for "FlowPilot - IOS" folder in "FlowPilot - Mac" target */,
+			);
 			path = "FlowPilot - IOS";
+			sourceTree = "<group>";
+		};
+		F0961B562EE3CF1B001B7D83 /* FlowPilotWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				F00EE52D2EEAE84400850F8E /* Exceptions for "FlowPilotWidget" folder in "FlowPilot - IOS" target */,
+				F0961B622EE3CF1C001B7D83 /* Exceptions for "FlowPilotWidget" folder in "FlowPilotWidgetExtension" target */,
+			);
+			path = FlowPilotWidget;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		F00EE4292EE9A55F00850F8E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F00EE42E2EE9A55F00850F8E /* SwiftUI.framework in Frameworks */,
+				F00EE42D2EE9A55F00850F8E /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F01135832EE3E82F00CF6A9E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F01135E42EE3EA7800CF6A9E /* FirebaseFirestore in Frameworks */,
+				F01135E62EE3EA7D00CF6A9E /* FirebaseAuth in Frameworks */,
+				F01135E82EE3EA8100CF6A9E /* GoogleSignIn in Frameworks */,
+				F01135EA2EE3EA8100CF6A9E /* GoogleSignInSwift in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		F044F1E42EE28CD5009B8205 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -39,14 +263,150 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F0961B502EE3CF1B001B7D83 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F0961B552EE3CF1B001B7D83 /* SwiftUI.framework in Frameworks */,
+				F0961B542EE3CF1B001B7D83 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		F01135922EE3E85F00CF6A9E /* App */ = {
+			isa = PBXGroup;
+			children = (
+				F01135912EE3E85F00CF6A9E /* FlowPilotmacOSApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		F01135942EE3E85F00CF6A9E /* Navigation */ = {
+			isa = PBXGroup;
+			children = (
+				F01135932EE3E85F00CF6A9E /* MainSplitView.swift */,
+			);
+			path = Navigation;
+			sourceTree = "<group>";
+		};
+		F01135962EE3E85F00CF6A9E /* Theme */ = {
+			isa = PBXGroup;
+			children = (
+				F01135952EE3E85F00CF6A9E /* Typography+macOS.swift */,
+			);
+			path = Theme;
+			sourceTree = "<group>";
+		};
+		F01135982EE3E85F00CF6A9E /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				F01135972EE3E85F00CF6A9E /* LoginView.swift */,
+			);
+			path = Auth;
+			sourceTree = "<group>";
+		};
+		F011359A2EE3E85F00CF6A9E /* Browse */ = {
+			isa = PBXGroup;
+			children = (
+				F01135992EE3E85F00CF6A9E /* BrowseView.swift */,
+			);
+			path = Browse;
+			sourceTree = "<group>";
+		};
+		F011359D2EE3E85F00CF6A9E /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				F011359B2EE3E85F00CF6A9E /* ConstellationProgressBar.swift */,
+				F0CC00012EE3E86000CF6A9E /* CustomCalendarPicker.swift */,
+				F0CC00022EE3E86000CF6A9E /* CustomDateInput.swift */,
+				F0CC00032EE3E86000CF6A9E /* CustomPicker.swift */,
+				F0CC00042EE3E86000CF6A9E /* CustomSlider.swift */,
+				F0CC00052EE3E86000CF6A9E /* CustomTextField.swift */,
+				F0CC00062EE3E86000CF6A9E /* CustomTimeInput.swift */,
+				F011359C2EE3E85F00CF6A9E /* PrimaryButton.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		F01135A22EE3E85F00CF6A9E /* Inbox */ = {
+			isa = PBXGroup;
+			children = (
+				F011359E2EE3E85F00CF6A9E /* ActivityLogSheet.swift */,
+				F011359F2EE3E85F00CF6A9E /* AddTaskSheet.swift */,
+				F01135A02EE3E85F00CF6A9E /* EditTaskSheet.swift */,
+				F01135A12EE3E85F00CF6A9E /* InboxView.swift */,
+			);
+			path = Inbox;
+			sourceTree = "<group>";
+		};
+		F01135A82EE3E85F00CF6A9E /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				F01135A32EE3E85F00CF6A9E /* OnboardingAllocateView.swift */,
+				F01135A42EE3E85F00CF6A9E /* OnboardingContainerView.swift */,
+				F01135A52EE3E85F00CF6A9E /* OnboardingNameView.swift */,
+				F01135A62EE3E85F00CF6A9E /* OnboardingPrioritiesView.swift */,
+				F01135A72EE3E85F00CF6A9E /* OnboardingSleepView.swift */,
+			);
+			path = Onboarding;
+			sourceTree = "<group>";
+		};
+		F01135AC2EE3E85F00CF6A9E /* Planner */ = {
+			isa = PBXGroup;
+			children = (
+				F01135A92EE3E85F00CF6A9E /* AddTimeBlockSheet.swift */,
+				F01135AA2EE3E85F00CF6A9E /* CalendarView.swift */,
+				F01135AB2EE3E85F00CF6A9E /* TodayView.swift */,
+			);
+			path = Planner;
+			sourceTree = "<group>";
+		};
+		F01135AE2EE3E85F00CF6A9E /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				F01135AD2EE3E85F00CF6A9E /* SettingsView.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		F01135AF2EE3E85F00CF6A9E /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				F01135982EE3E85F00CF6A9E /* Auth */,
+				F011359A2EE3E85F00CF6A9E /* Browse */,
+				F011359D2EE3E85F00CF6A9E /* Components */,
+				F01135A22EE3E85F00CF6A9E /* Inbox */,
+				F01135A82EE3E85F00CF6A9E /* Onboarding */,
+				F01135AC2EE3E85F00CF6A9E /* Planner */,
+				F01135AE2EE3E85F00CF6A9E /* Settings */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		F01135B02EE3E85F00CF6A9E /* FlowPilot-macOS */ = {
+			isa = PBXGroup;
+			children = (
+				F01135922EE3E85F00CF6A9E /* App */,
+				F01135942EE3E85F00CF6A9E /* Navigation */,
+				F01135962EE3E85F00CF6A9E /* Theme */,
+				F01135AF2EE3E85F00CF6A9E /* Views */,
+			);
+			path = "FlowPilot-macOS";
+			sourceTree = "<group>";
+		};
 		F044F1DE2EE28CD5009B8205 = {
 			isa = PBXGroup;
 			children = (
+				F01135B02EE3E85F00CF6A9E /* FlowPilot-macOS */,
 				F044F1E92EE28CD5009B8205 /* FlowPilot - IOS */,
+				F0961B562EE3CF1B001B7D83 /* FlowPilotWidget */,
+				F01135872EE3E82F00CF6A9E /* FlowPilot - Mac */,
+				F00EE42F2EE9A55F00850F8E /* FlowPilotMacWidget */,
+				F0961B082EE3CCE1001B7D83 /* Frameworks */,
 				F044F1E82EE28CD5009B8205 /* Products */,
+				F00EE4232EE812B400850F8E /* DaySelector.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -54,13 +414,75 @@
 			isa = PBXGroup;
 			children = (
 				F044F1E72EE28CD5009B8205 /* FlowPilot - IOS.app */,
+				F0961B532EE3CF1B001B7D83 /* FlowPilotWidgetExtension.appex */,
+				F01135862EE3E82F00CF6A9E /* FlowPilot - Mac.app */,
+				F00EE42C2EE9A55F00850F8E /* FlowPilotMacWidgetExtension.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		F0961B082EE3CCE1001B7D83 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				F0961B092EE3CCE1001B7D83 /* WidgetKit.framework */,
+				F0961B0B2EE3CCE1001B7D83 /* SwiftUI.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		F00EE42B2EE9A55F00850F8E /* FlowPilotMacWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F00EE43D2EE9A56000850F8E /* Build configuration list for PBXNativeTarget "FlowPilotMacWidgetExtension" */;
+			buildPhases = (
+				F00EE4282EE9A55F00850F8E /* Sources */,
+				F00EE4292EE9A55F00850F8E /* Frameworks */,
+				F00EE42A2EE9A55F00850F8E /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				F00EE42F2EE9A55F00850F8E /* FlowPilotMacWidget */,
+			);
+			name = FlowPilotMacWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = FlowPilotMacWidgetExtension;
+			productReference = F00EE42C2EE9A55F00850F8E /* FlowPilotMacWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		F01135852EE3E82F00CF6A9E /* FlowPilot - Mac */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F011358E2EE3E83000CF6A9E /* Build configuration list for PBXNativeTarget "FlowPilot - Mac" */;
+			buildPhases = (
+				F01135822EE3E82F00CF6A9E /* Sources */,
+				F01135832EE3E82F00CF6A9E /* Frameworks */,
+				F01135842EE3E82F00CF6A9E /* Resources */,
+				F00EE43B2EE9A56000850F8E /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F00EE43A2EE9A56000850F8E /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				F01135872EE3E82F00CF6A9E /* FlowPilot - Mac */,
+			);
+			name = "FlowPilot - Mac";
+			packageProductDependencies = (
+				F01135E32EE3EA7800CF6A9E /* FirebaseFirestore */,
+				F01135E52EE3EA7D00CF6A9E /* FirebaseAuth */,
+				F01135E72EE3EA8100CF6A9E /* GoogleSignIn */,
+				F01135E92EE3EA8100CF6A9E /* GoogleSignInSwift */,
+			);
+			productName = "FlowPilot - Mac";
+			productReference = F01135862EE3E82F00CF6A9E /* FlowPilot - Mac.app */;
+			productType = "com.apple.product-type.application";
+		};
 		F044F1E62EE28CD5009B8205 /* FlowPilot - IOS */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = F044F1F22EE28CD6009B8205 /* Build configuration list for PBXNativeTarget "FlowPilot - IOS" */;
@@ -68,10 +490,12 @@
 				F044F1E32EE28CD5009B8205 /* Sources */,
 				F044F1E42EE28CD5009B8205 /* Frameworks */,
 				F044F1E52EE28CD5009B8205 /* Resources */,
+				F0961B222EE3CCE2001B7D83 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				F0961B612EE3CF1C001B7D83 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				F044F1E92EE28CD5009B8205 /* FlowPilot - IOS */,
@@ -88,6 +512,28 @@
 			productReference = F044F1E72EE28CD5009B8205 /* FlowPilot - IOS.app */;
 			productType = "com.apple.product-type.application";
 		};
+		F0961B522EE3CF1B001B7D83 /* FlowPilotWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F0961B632EE3CF1C001B7D83 /* Build configuration list for PBXNativeTarget "FlowPilotWidgetExtension" */;
+			buildPhases = (
+				F0961B4F2EE3CF1B001B7D83 /* Sources */,
+				F0961B502EE3CF1B001B7D83 /* Frameworks */,
+				F0961B512EE3CF1B001B7D83 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				F0961B562EE3CF1B001B7D83 /* FlowPilotWidget */,
+			);
+			name = FlowPilotWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = FlowPilotWidgetExtension;
+			productReference = F0961B532EE3CF1B001B7D83 /* FlowPilotWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -98,7 +544,16 @@
 				LastSwiftUpdateCheck = 2610;
 				LastUpgradeCheck = 2610;
 				TargetAttributes = {
+					F00EE42B2EE9A55F00850F8E = {
+						CreatedOnToolsVersion = 26.1.1;
+					};
+					F01135852EE3E82F00CF6A9E = {
+						CreatedOnToolsVersion = 26.1.1;
+					};
 					F044F1E62EE28CD5009B8205 = {
+						CreatedOnToolsVersion = 26.1.1;
+					};
+					F0961B522EE3CF1B001B7D83 = {
 						CreatedOnToolsVersion = 26.1.1;
 					};
 				};
@@ -122,12 +577,36 @@
 			projectRoot = "";
 			targets = (
 				F044F1E62EE28CD5009B8205 /* FlowPilot - IOS */,
+				F0961B522EE3CF1B001B7D83 /* FlowPilotWidgetExtension */,
+				F01135852EE3E82F00CF6A9E /* FlowPilot - Mac */,
+				F00EE42B2EE9A55F00850F8E /* FlowPilotMacWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		F00EE42A2EE9A55F00850F8E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F01135842EE3E82F00CF6A9E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		F044F1E52EE28CD5009B8205 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F0961B512EE3CF1B001B7D83 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -137,7 +616,55 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		F00EE4282EE9A55F00850F8E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F01135822EE3E82F00CF6A9E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F01135B12EE3E85F00CF6A9E /* OnboardingAllocateView.swift in Sources */,
+				F01135B22EE3E85F00CF6A9E /* OnboardingNameView.swift in Sources */,
+				F01135B32EE3E85F00CF6A9E /* AddTimeBlockSheet.swift in Sources */,
+				F01135B42EE3E85F00CF6A9E /* CalendarView.swift in Sources */,
+				F01135B52EE3E85F00CF6A9E /* AddTaskSheet.swift in Sources */,
+				F01135B62EE3E85F00CF6A9E /* LoginView.swift in Sources */,
+				F01135B72EE3E85F00CF6A9E /* FlowPilotmacOSApp.swift in Sources */,
+				F01135B82EE3E85F00CF6A9E /* OnboardingPrioritiesView.swift in Sources */,
+				F01135B92EE3E85F00CF6A9E /* OnboardingSleepView.swift in Sources */,
+				F01135BA2EE3E85F00CF6A9E /* MainSplitView.swift in Sources */,
+				F01135BB2EE3E85F00CF6A9E /* BrowseView.swift in Sources */,
+				F01135BC2EE3E85F00CF6A9E /* ConstellationProgressBar.swift in Sources */,
+				F01135BD2EE3E85F00CF6A9E /* ActivityLogSheet.swift in Sources */,
+				F01135BE2EE3E85F00CF6A9E /* EditTaskSheet.swift in Sources */,
+				F01135BF2EE3E85F00CF6A9E /* SettingsView.swift in Sources */,
+				F01135C02EE3E85F00CF6A9E /* Typography+macOS.swift in Sources */,
+				F01135C12EE3E85F00CF6A9E /* TodayView.swift in Sources */,
+				F01135C22EE3E85F00CF6A9E /* PrimaryButton.swift in Sources */,
+				F00EE4242EE812B400850F8E /* DaySelector.swift in Sources */,
+				F01135C32EE3E85F00CF6A9E /* InboxView.swift in Sources */,
+				F01135C42EE3E85F00CF6A9E /* OnboardingContainerView.swift in Sources */,
+				F0CC00072EE3E86000CF6A9E /* CustomCalendarPicker.swift in Sources */,
+				F0CC00082EE3E86000CF6A9E /* CustomDateInput.swift in Sources */,
+				F0CC00092EE3E86000CF6A9E /* CustomPicker.swift in Sources */,
+				F0CC000A2EE3E86000CF6A9E /* CustomSlider.swift in Sources */,
+				F0CC000B2EE3E86000CF6A9E /* CustomTextField.swift in Sources */,
+				F0CC000C2EE3E86000CF6A9E /* CustomTimeInput.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		F044F1E32EE28CD5009B8205 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F0961B4F2EE3CF1B001B7D83 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -146,7 +673,178 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		F00EE43A2EE9A56000850F8E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F00EE42B2EE9A55F00850F8E /* FlowPilotMacWidgetExtension */;
+			targetProxy = F00EE4392EE9A56000850F8E /* PBXContainerItemProxy */;
+		};
+		F0961B612EE3CF1C001B7D83 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F0961B522EE3CF1B001B7D83 /* FlowPilotWidgetExtension */;
+			targetProxy = F0961B602EE3CF1C001B7D83 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		F00EE43E2EE9A56000850F8E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = DM2F383HUE;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FlowPilotMacWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = FlowPilotMacWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.6;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.junyutoh.macflowpilot.FlowPilot---Mac.FlowPilotMacWidget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		F00EE43F2EE9A56000850F8E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = DM2F383HUE;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FlowPilotMacWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = FlowPilotMacWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.6;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.junyutoh.macflowpilot.FlowPilot---Mac.FlowPilotMacWidget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		F011358F2EE3E83000CF6A9E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "FlowPilot - Mac/FlowPilot - Mac.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = DM2F383HUE;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = NO;
+				ENABLE_RESOURCE_ACCESS_BLUETOOTH = NO;
+				ENABLE_RESOURCE_ACCESS_CALENDARS = NO;
+				ENABLE_RESOURCE_ACCESS_CAMERA = NO;
+				ENABLE_RESOURCE_ACCESS_CONTACTS = NO;
+				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
+				ENABLE_RESOURCE_ACCESS_PRINTING = NO;
+				ENABLE_RESOURCE_ACCESS_USB = NO;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "FlowPilot - Mac/Info.plist";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.6;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.junyutoh.macflowpilot.FlowPilot---Mac";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		F01135902EE3E83000CF6A9E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "FlowPilot - Mac/FlowPilot - Mac.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = DM2F383HUE;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = NO;
+				ENABLE_RESOURCE_ACCESS_BLUETOOTH = NO;
+				ENABLE_RESOURCE_ACCESS_CALENDARS = NO;
+				ENABLE_RESOURCE_ACCESS_CAMERA = NO;
+				ENABLE_RESOURCE_ACCESS_CONTACTS = NO;
+				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
+				ENABLE_RESOURCE_ACCESS_PRINTING = NO;
+				ENABLE_RESOURCE_ACCESS_USB = NO;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "FlowPilot - Mac/Info.plist";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.6;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.junyutoh.macflowpilot.FlowPilot---Mac";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 		F044F1F02EE28CD6009B8205 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -272,9 +970,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "FlowPilot - IOS/FlowPilot - IOS.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = DM2F383HUE;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -287,7 +986,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 6;
 				PRODUCT_BUNDLE_IDENTIFIER = com.junyutoh.iosflowpilot;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -311,9 +1010,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "FlowPilot - IOS/FlowPilot - IOS.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = DM2F383HUE;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -326,7 +1026,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 6;
 				PRODUCT_BUNDLE_IDENTIFIER = com.junyutoh.iosflowpilot;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -345,9 +1045,92 @@
 			};
 			name = Release;
 		};
+		F0961B642EE3CF1C001B7D83 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = FlowPilotWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 3;
+				DEVELOPMENT_TEAM = DM2F383HUE;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FlowPilotWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = FlowPilotWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.junyutoh.iosflowpilot.FlowPilotWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		F0961B652EE3CF1C001B7D83 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = FlowPilotWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 3;
+				DEVELOPMENT_TEAM = DM2F383HUE;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FlowPilotWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = FlowPilotWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.junyutoh.iosflowpilot.FlowPilotWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		F00EE43D2EE9A56000850F8E /* Build configuration list for PBXNativeTarget "FlowPilotMacWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F00EE43E2EE9A56000850F8E /* Debug */,
+				F00EE43F2EE9A56000850F8E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F011358E2EE3E83000CF6A9E /* Build configuration list for PBXNativeTarget "FlowPilot - Mac" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F011358F2EE3E83000CF6A9E /* Debug */,
+				F01135902EE3E83000CF6A9E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		F044F1E22EE28CD5009B8205 /* Build configuration list for PBXProject "FlowPilot - IOS" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -362,6 +1145,15 @@
 			buildConfigurations = (
 				F044F1F32EE28CD6009B8205 /* Debug */,
 				F044F1F42EE28CD6009B8205 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F0961B632EE3CF1C001B7D83 /* Build configuration list for PBXNativeTarget "FlowPilotWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F0961B642EE3CF1C001B7D83 /* Debug */,
+				F0961B652EE3CF1C001B7D83 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -388,6 +1180,26 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		F01135E32EE3EA7800CF6A9E /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F044F3952EE2D3DA009B8205 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+		F01135E52EE3EA7D00CF6A9E /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F044F3952EE2D3DA009B8205 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		F01135E72EE3EA8100CF6A9E /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F044F3902EE2D37F009B8205 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+		F01135E92EE3EA8100CF6A9E /* GoogleSignInSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F044F3902EE2D37F009B8205 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignInSwift;
+		};
 		F044F3912EE2D37F009B8205 /* GoogleSignIn */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = F044F3902EE2D37F009B8205 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;

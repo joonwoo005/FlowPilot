@@ -70,3 +70,4 @@ When adding new files:
 - Always use the design system tokens (Typography, Spacing, CornerRadius, Colors)
 - No need to build to test.
 - Remember to update the correct file within the xcode project.
+- Make sure views that do not fit in the window either get a scrollview or resized

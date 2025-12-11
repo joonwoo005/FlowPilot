@@ -44,13 +44,27 @@ struct OnboardingPrioritiesView: View {
                             priority: priority,
                             onDelete: {
                                 withAnimation(.spring(response: 0.3)) {
-                                    state.priorities.removeAll { $0.id == priority.id }
+                                    state.deletePriority(priority.id)
                                 }
                             }
                         )
                     }
 
-                    AddPriorityButton { showAddSheet = true }
+                    if state.canAddPriority {
+                        AddPriorityButton { showAddSheet = true }
+                    } else {
+                        HStack(spacing: Spacing.sm) {
+                            Image(systemName: "info.circle.fill")
+                                .font(.system(size: 14))
+                                .foregroundColor(.textMuted)
+
+                            Text("Maximum of \(OnboardingState.maxPriorities) priorities reached")
+                                .font(Typography.labelSmall)
+                                .foregroundColor(.textMuted)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, Spacing.md)
+                    }
                 }
                 .padding(.horizontal, Spacing.xl)
                 .padding(.top, Spacing.lg)
@@ -79,6 +93,7 @@ struct OnboardingPrioritiesView: View {
                 name: $newPriorityName,
                 existingNames: state.priorities.map { $0.name.lowercased() },
                 onAdd: {
+                    guard state.canAddPriority else { return }
                     let trimmed = newPriorityName.trimmingCharacters(in: .whitespacesAndNewlines)
                     let isDuplicate = state.priorities.contains { $0.name.lowercased() == trimmed.lowercased() }
 
@@ -91,7 +106,7 @@ struct OnboardingPrioritiesView: View {
                             hoursPerWeek: 5
                         )
                         withAnimation {
-                            state.priorities.append(newPriority)
+                            state.addPriority(newPriority)
                         }
                         newPriorityName = ""
                         showAddSheet = false
@@ -207,8 +222,8 @@ struct AddPrioritySheet: View {
     var body: some View {
         VStack(spacing: Spacing.lg) {
             HStack {
-                Text("Cancel")
-                    .font(Typography.bodyMedium)
+                Image(systemName: "xmark")
+                    .font(.system(size: 16, weight: .medium))
                     .foregroundColor(.textSecondary)
                     .onTapGesture { onCancel() }
 
@@ -282,7 +297,7 @@ struct AddPrioritySheet: View {
             Spacer()
         }
         .padding(.horizontal, Spacing.xl)
-        .background(Color.backgroundSecondary)
+        .background(Color.backgroundSecondary.ignoresSafeArea())
         .onAppear { isFocused = true }
     }
 }

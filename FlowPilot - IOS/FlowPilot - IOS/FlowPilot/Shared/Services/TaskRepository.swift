@@ -108,7 +108,17 @@ class TaskRepository {
         ]
 
         if let dueDate = task.dueDate {
-            data["dueDate"] = Timestamp(date: dueDate)
+            // Store date at midnight (date-only)
+            let calendar = Calendar.current
+            let dateOnly = calendar.startOfDay(for: dueDate)
+            data["dueDate"] = Timestamp(date: dateOnly)
+        }
+
+        if let dueTime = task.dueTime {
+            data["dueTime"] = [
+                "hour": dueTime.hour,
+                "minute": dueTime.minute
+            ]
         }
 
         if let completedAt = task.completedAt {
@@ -127,6 +137,10 @@ class TaskRepository {
             data["timeBlockId"] = timeBlockId.uuidString
         }
 
+        if let projectId = task.projectId {
+            data["projectId"] = projectId.uuidString
+        }
+
         return data
     }
 
@@ -139,9 +153,36 @@ class TaskRepository {
         }
 
         let isCompleted = data["isCompleted"] as? Bool ?? false
-        let dueDate = (data["dueDate"] as? Timestamp)?.dateValue()
         let completedAt = (data["completedAt"] as? Timestamp)?.dateValue()
         let createdAt = (data["createdAt"] as? Timestamp)?.dateValue() ?? Date()
+
+        // Handle dueDate and dueTime with migration
+        var dueDate: Date? = nil
+        var dueTime: DueTime? = nil
+
+        if let timestamp = data["dueDate"] as? Timestamp {
+            let fullDate = timestamp.dateValue()
+            let calendar = Calendar.current
+
+            // Check for new format (dueTime field exists)
+            if let timeData = data["dueTime"] as? [String: Any],
+               let hour = timeData["hour"] as? Int,
+               let minute = timeData["minute"] as? Int {
+                dueDate = calendar.startOfDay(for: fullDate)
+                dueTime = DueTime(hour: hour, minute: minute)
+            } else {
+                // Migration: Check if old dueDate has time component
+                let hour = calendar.component(.hour, from: fullDate)
+                let minute = calendar.component(.minute, from: fullDate)
+
+                dueDate = calendar.startOfDay(for: fullDate)
+
+                // Only create dueTime if there was actually a time set (not midnight)
+                if hour != 0 || minute != 0 {
+                    dueTime = DueTime(hour: hour, minute: minute)
+                }
+            }
+        }
 
         var priority: Priority?
         if let priorityData = data["priority"] as? [String: Any],
@@ -157,12 +198,19 @@ class TaskRepository {
             timeBlockId = UUID(uuidString: timeBlockIdString)
         }
 
+        var projectId: UUID?
+        if let projectIdString = data["projectId"] as? String {
+            projectId = UUID(uuidString: projectIdString)
+        }
+
         return FlowTask(
             id: id,
             name: name,
             dueDate: dueDate,
+            dueTime: dueTime,
             priority: priority,
             timeBlockId: timeBlockId,
+            projectId: projectId,
             isCompleted: isCompleted,
             completedAt: completedAt,
             createdAt: createdAt

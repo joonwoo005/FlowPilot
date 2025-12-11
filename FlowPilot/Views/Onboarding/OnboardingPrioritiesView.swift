@@ -8,7 +8,6 @@ struct OnboardingPrioritiesView: View {
     @State private var hasAppeared = false
     @State private var showAddSheet = false
     @State private var newPriorityName = ""
-    @State private var selectedColor: Color = .priorityBlue
     @FocusState private var isAddingPriority: Bool
 
     var body: some View {
@@ -148,21 +147,23 @@ struct OnboardingPrioritiesView: View {
         .sheet(isPresented: $showAddSheet) {
             AddPrioritySheet(
                 name: $newPriorityName,
-                selectedColor: $selectedColor,
+                existingNames: state.priorities.map { $0.name.lowercased() },
                 onAdd: {
                     let trimmedName = newPriorityName.trimmingCharacters(in: .whitespacesAndNewlines)
-                    if !trimmedName.isEmpty {
+                    let isDuplicate = state.priorities.contains { $0.name.lowercased() == trimmedName.lowercased() }
+
+                    if !trimmedName.isEmpty && !isDuplicate {
+                        let autoColor = Priority.nextColor(forIndex: state.priorities.count)
                         let newPriority = Priority(
                             id: UUID(),
                             name: trimmedName,
-                            color: selectedColor,
+                            color: autoColor,
                             hoursPerWeek: 5
                         )
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                             state.priorities.append(newPriority)
                         }
                         newPriorityName = ""
-                        selectedColor = .priorityBlue
                         showAddSheet = false
                     }
                 },
@@ -171,7 +172,7 @@ struct OnboardingPrioritiesView: View {
                     showAddSheet = false
                 }
             )
-            .presentationDetents([.height(320)])
+            .presentationDetents([.height(200)])
             .presentationDragIndicator(.visible)
         }
     }
@@ -276,76 +277,97 @@ struct AddPriorityButton: View {
 // MARK: - Add Priority Sheet
 struct AddPrioritySheet: View {
     @Binding var name: String
-    @Binding var selectedColor: Color
+    let existingNames: [String]
     let onAdd: () -> Void
     let onCancel: () -> Void
 
     @FocusState private var isFocused: Bool
+    @State private var showLimitError = false
+
+    private let characterLimit = 20
+
+    private var isDuplicate: Bool {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return !trimmed.isEmpty && existingNames.contains(trimmed)
+    }
+
+    private var canAdd: Bool {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !trimmed.isEmpty && !isDuplicate
+    }
 
     var body: some View {
-        VStack(spacing: Spacing.xl) {
-            // Header
+        VStack(spacing: Spacing.lg) {
             HStack {
-                Button("Cancel", action: onCancel)
-                    .font(Typography.bodyLarge)
+                Image(systemName: "xmark")
+                    .font(.system(size: 16, weight: .medium))
                     .foregroundColor(.textSecondary)
+                    .onTapGesture { onCancel() }
 
                 Spacer()
 
                 Text("New Priority")
-                    .font(Typography.labelLarge)
+                    .font(Typography.labelMedium)
                     .foregroundColor(.textPrimary)
 
                 Spacer()
 
-                Button("Add", action: onAdd)
-                    .font(Typography.bodyLarge)
+                Text("Add")
+                    .font(Typography.bodyMedium)
                     .fontWeight(.semibold)
-                    .foregroundColor(.accentPrimary)
-                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            }
-            .padding(.top, Spacing.lg)
-
-            // Name input
-            TextField("Priority name", text: $name)
-                .font(Typography.headlineSmall)
-                .foregroundColor(.textPrimary)
-                .focused($isFocused)
-                .padding(.horizontal, Spacing.lg)
-                .padding(.vertical, Spacing.base)
-                .background(
-                    RoundedRectangle(cornerRadius: CornerRadius.md)
-                        .fill(Color.surfacePrimary)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: CornerRadius.md)
-                                .stroke(isFocused ? Color.accentPrimary : Color.surfaceBorder, lineWidth: 1)
-                        )
-                )
-
-            // Color picker
-            VStack(alignment: .leading, spacing: Spacing.md) {
-                Text("Color")
-                    .font(Typography.labelMedium)
-                    .foregroundColor(.textSecondary)
-
-                HStack(spacing: Spacing.md) {
-                    ForEach(Priority.availableColors, id: \.self) { color in
-                        Circle()
-                            .fill(color)
-                            .frame(width: 36, height: 36)
-                            .overlay(
-                                Circle()
-                                    .stroke(Color.white, lineWidth: selectedColor == color ? 2 : 0)
-                                    .padding(2)
-                            )
-                            .scaleEffect(selectedColor == color ? 1.1 : 1.0)
-                            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: selectedColor)
-                            .onTapGesture {
-                                let impact = UIImpactFeedbackGenerator(style: .light)
-                                impact.impactOccurred()
-                                selectedColor = color
-                            }
+                    .foregroundColor(canAdd ? .accentPrimary : .textMuted)
+                    .onTapGesture {
+                        if canAdd { onAdd() }
                     }
+            }
+            .padding(.top, Spacing.base)
+
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                TextField("", text: $name)
+                    .font(Typography.bodyLarge)
+                    .foregroundColor(.textPrimary)
+                    .focused($isFocused)
+                    .placeholder(when: name.isEmpty) {
+                        Text("Priority name")
+                            .font(Typography.bodyLarge)
+                            .foregroundColor(.textSecondary)
+                    }
+                    .padding(.horizontal, Spacing.sm)
+                    .padding(.vertical, Spacing.sm)
+                    .background(
+                        RoundedRectangle(cornerRadius: CornerRadius.sm)
+                            .fill(Color.surfacePrimary)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: CornerRadius.sm)
+                                    .stroke((showLimitError || isDuplicate) ? Color.accentError : (isFocused ? Color.accentPrimary : Color.surfaceBorder), lineWidth: 1)
+                            )
+                    )
+                    .onChange(of: name) {
+                        if name.count > characterLimit {
+                            name = String(name.prefix(characterLimit))
+                            showLimitError = true
+                            Haptics.impact(.heavy)
+                        } else {
+                            showLimitError = false
+                        }
+                    }
+
+                HStack {
+                    if showLimitError {
+                        Text("Maximum \(characterLimit) characters")
+                            .font(Typography.labelSmall)
+                            .foregroundColor(.accentError)
+                    } else if isDuplicate {
+                        Text("Priority already exists")
+                            .font(Typography.labelSmall)
+                            .foregroundColor(.accentError)
+                    }
+
+                    Spacer()
+
+                    Text("\(name.count)/\(characterLimit)")
+                        .font(Typography.labelSmall)
+                        .foregroundColor((showLimitError || isDuplicate) ? .accentError : .textMuted)
                 }
             }
 
@@ -353,9 +375,7 @@ struct AddPrioritySheet: View {
         }
         .padding(.horizontal, Spacing.xl)
         .background(Color.backgroundSecondary)
-        .onAppear {
-            isFocused = true
-        }
+        .onAppear { isFocused = true }
     }
 }
 

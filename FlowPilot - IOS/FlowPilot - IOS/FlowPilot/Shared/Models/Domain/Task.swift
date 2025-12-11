@@ -1,12 +1,40 @@
 import SwiftUI
 
+// MARK: - Due Time Model
+struct DueTime: Codable, Equatable {
+    let hour: Int    // 0-23
+    let minute: Int  // 0-59
+
+    var asDateComponents: DateComponents {
+        DateComponents(hour: hour, minute: minute)
+    }
+
+    init(hour: Int, minute: Int) {
+        self.hour = hour
+        self.minute = minute
+    }
+
+    init(from dateComponents: DateComponents) {
+        self.hour = dateComponents.hour ?? 0
+        self.minute = dateComponents.minute ?? 0
+    }
+
+    var formatted: String {
+        let displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour)
+        let ampm = hour >= 12 ? "pm" : "am"
+        return minute > 0 ? "\(displayHour):\(String(format: "%02d", minute))\(ampm)" : "\(displayHour)\(ampm)"
+    }
+}
+
 // MARK: - Task Model
 struct FlowTask: Identifiable, Equatable {
     let id: UUID
     var name: String
-    var dueDate: Date?
+    var dueDate: Date?      // Date only (stored at midnight)
+    var dueTime: DueTime?   // Time only (optional)
     var priority: Priority?
     var timeBlockId: UUID?
+    var projectId: UUID?
     var isCompleted: Bool
     var completedAt: Date?
     var createdAt: Date
@@ -15,8 +43,10 @@ struct FlowTask: Identifiable, Equatable {
         id: UUID = UUID(),
         name: String,
         dueDate: Date? = nil,
+        dueTime: DueTime? = nil,
         priority: Priority? = nil,
         timeBlockId: UUID? = nil,
+        projectId: UUID? = nil,
         isCompleted: Bool = false,
         completedAt: Date? = nil,
         createdAt: Date = Date()
@@ -24,11 +54,25 @@ struct FlowTask: Identifiable, Equatable {
         self.id = id
         self.name = name
         self.dueDate = dueDate
+        self.dueTime = dueTime
         self.priority = priority
         self.timeBlockId = timeBlockId
+        self.projectId = projectId
         self.isCompleted = isCompleted
         self.completedAt = completedAt
         self.createdAt = createdAt
+    }
+
+    // Combined date + time for notifications and sorting
+    var dueDateWithTime: Date? {
+        guard let date = dueDate else { return nil }
+        guard let time = dueTime else { return date }
+
+        let calendar = Calendar.current
+        var components = calendar.dateComponents([.year, .month, .day], from: date)
+        components.hour = time.hour
+        components.minute = time.minute
+        return calendar.date(from: components)
     }
 
     // MARK: - Due Date Status
@@ -126,18 +170,14 @@ struct FlowTask: Identifiable, Equatable {
         return nil
     }
 
-    /// Returns just the time portion: "3:00 PM"
+    /// Returns just the time portion if explicitly set
     var formattedTime: String? {
-        guard let dueDate = dueDate else { return nil }
-
-        let formatter = DateFormatter()
-        formatter.dateFormat = "h:mm a"
-        return formatter.string(from: dueDate)
+        guard let time = dueTime else { return nil }
+        return time.formatted
     }
 
-    /// Smart display label - shows time only since day is in section header
+    /// Smart display label - shows time only if explicitly set
     var displayDueLabel: String? {
-        guard dueDate != nil else { return nil }
         return formattedTime
     }
 }

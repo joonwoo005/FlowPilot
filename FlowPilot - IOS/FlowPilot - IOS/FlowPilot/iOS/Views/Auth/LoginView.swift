@@ -7,8 +7,6 @@ struct LoginView: View {
     @State private var showButtons = false
     @State private var pulseIcon = false
     @State private var orbitPhase: CGFloat = 0
-    @State private var showError = false
-    @State private var errorMessage = ""
 
     // Welcome screen accent colors (warm coral)
     private let accentCoral = Color(hex: "FF6B5B")
@@ -63,11 +61,6 @@ struct LoginView: View {
         .ignoresSafeArea()
         .onAppear {
             startAnimations()
-        }
-        .alert("Sign In Error", isPresented: $showError) {
-            Button("OK", role: .cancel) { }
-        } message: {
-            Text(errorMessage)
         }
     }
 
@@ -149,25 +142,6 @@ struct LoginView: View {
 
     private func heroSection(screenWidth: CGFloat) -> some View {
         VStack(spacing: Spacing.xl) {
-            // App icon with glow effect
-            ZStack {
-                // Outer glow
-                Circle()
-                    .fill(accentCoral.opacity(0.25))
-                    .frame(width: screenWidth * 0.42, height: screenWidth * 0.42)
-                    .blur(radius: 35)
-                    .scaleEffect(pulseIcon ? 1.08 : 1.0)
-
-                // Icon
-                Image("AppIconDisplay")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: screenWidth * 0.32, height: screenWidth * 0.32)
-                    .clipShape(RoundedRectangle(cornerRadius: screenWidth * 0.075, style: .continuous))
-                    .shadow(color: Color.black.opacity(0.5), radius: 25, x: 0, y: 18)
-                    .shadow(color: accentCoral.opacity(0.35), radius: 35, x: 0, y: 12)
-            }
-
             VStack(spacing: Spacing.sm) {
                 // App name
                 Text("FlowPilot")
@@ -210,12 +184,7 @@ struct LoginView: View {
             Button {
                 Haptics.impact(.medium)
                 Task {
-                    do {
-                        try await authService.signInWithGoogle()
-                    } catch {
-                        errorMessage = error.localizedDescription
-                        showError = true
-                    }
+                    try? await authService.signInWithGoogle()
                 }
             } label: {
                 HStack(spacing: Spacing.sm) {
@@ -255,12 +224,7 @@ struct LoginView: View {
             Button {
                 Haptics.impact(.light)
                 Task {
-                    do {
-                        try await authService.continueAsGuest()
-                    } catch {
-                        errorMessage = error.localizedDescription
-                        showError = true
-                    }
+                    try? await authService.continueAsGuest()
                 }
             } label: {
                 HStack(spacing: Spacing.sm) {

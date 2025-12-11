@@ -68,7 +68,10 @@ struct OnboardingAllocateView: View {
                         PrioritySliderRow(
                             priority: $priority,
                             totalAvailableHours: availableHours,
-                            remainingHours: remainingHours
+                            remainingHours: remainingHours,
+                            onHoursChanged: { updatedPriority in
+                                state.updatePriority(updatedPriority)
+                            }
                         )
                     }
                 }
@@ -170,6 +173,7 @@ struct PrioritySliderRow: View {
     @Binding var priority: Priority
     let totalAvailableHours: Double
     let remainingHours: Double
+    var onHoursChanged: ((Priority) -> Void)?
 
     // Max this slider can go: current value + whatever is remaining
     private var maxAllowed: Double {
@@ -212,8 +216,13 @@ struct PrioritySliderRow: View {
             }
 
             // Fixed range for visual proportionality
-            Slider(value: clampedHours, in: 1...max(1, totalAvailableHours), step: 1)
-                .tint(priority.color)
+            Slider(value: clampedHours, in: 1...max(1, totalAvailableHours), step: 1) { editing in
+                // Only save when user finishes dragging
+                if !editing {
+                    onHoursChanged?(priority)
+                }
+            }
+            .tint(priority.color)
         }
         .padding(Spacing.base)
         .background(

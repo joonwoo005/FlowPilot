@@ -1,7 +1,7 @@
 import SwiftUI
 
 // MARK: - Time Block Model
-struct TimeBlock: Identifiable, Equatable {
+struct TimeBlock: Identifiable, Equatable, Hashable {
     let id: UUID
     var priorityId: UUID
     var priorityName: String
@@ -10,6 +10,8 @@ struct TimeBlock: Identifiable, Equatable {
     var endTime: Date
     var earlyReminders: [Int] // minutes before start
     var createdAt: Date
+    var recurrenceId: UUID? // Groups recurring blocks together
+    var recurringDays: Set<Int>? // Days selected (1=Sun, 2=Mon...7=Sat)
 
     init(
         id: UUID = UUID(),
@@ -19,7 +21,9 @@ struct TimeBlock: Identifiable, Equatable {
         startTime: Date,
         endTime: Date,
         earlyReminders: [Int] = [],
-        createdAt: Date = Date()
+        createdAt: Date = Date(),
+        recurrenceId: UUID? = nil,
+        recurringDays: Set<Int>? = nil
     ) {
         self.id = id
         self.priorityId = priorityId
@@ -29,6 +33,14 @@ struct TimeBlock: Identifiable, Equatable {
         self.endTime = endTime
         self.earlyReminders = earlyReminders
         self.createdAt = createdAt
+        self.recurrenceId = recurrenceId
+        self.recurringDays = recurringDays
+    }
+
+    // MARK: - Recurrence
+
+    var isRecurring: Bool {
+        recurrenceId != nil
     }
 
     // MARK: - Computed Properties

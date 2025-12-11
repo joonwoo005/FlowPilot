@@ -18,6 +18,8 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -26,6 +28,14 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>com.googleusercontent.apps.258718008090-kuvpeocmn01224itet1tc8chnvqhb8f8</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>flowpilot</string>
 			</array>
 		</dict>
 	</array>
@@ -39,5 +49,7 @@
 	<string>public.app-category.utilities</string>
 	<key>UIRequiresFullScreen</key>
 	<true/>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>FlowPilot needs access to your calendar to sync your time blocks and tasks with Apple Calendar.</string>
 </dict>
 </plist>

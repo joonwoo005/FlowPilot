@@ -1,7 +1,7 @@
 import Foundation
 
 // MARK: - Sleep Schedule
-struct SleepSchedule {
+struct SleepSchedule: Codable {
     var wakeTime: Date
     var sleepTime: Date
 

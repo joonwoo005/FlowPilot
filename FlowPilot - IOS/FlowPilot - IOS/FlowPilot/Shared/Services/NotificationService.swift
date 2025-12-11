@@ -33,20 +33,20 @@ class NotificationService {
     ///   - blockId: Unique identifier for the time block
     ///   - title: The name/title of the time block (e.g., priority name)
     ///   - startTime: When the block starts
+    ///   - endTime: When the block ends
     ///   - earlyReminderMinutes: Array of minutes before start to send reminders (e.g., [5, 15, 30])
     func scheduleTimeBlockNotifications(
         blockId: UUID,
         title: String,
         startTime: Date,
+        endTime: Date,
         earlyReminderMinutes: [Int]
     ) {
-        let center = UNUserNotificationCenter.current()
-
         // Always schedule notification at start time
         scheduleNotification(
             id: "\(blockId.uuidString)-start",
-            title: "Time Block Starting",
-            body: "\(title) is starting now",
+            title: "Time for \(title)",
+            body: "",
             date: startTime
         )
 
@@ -66,6 +66,14 @@ class NotificationService {
                 date: reminderDate
             )
         }
+
+        // Schedule completion notification
+        scheduleNotification(
+            id: "\(blockId.uuidString)-complete",
+            title: "\(title) completed",
+            body: "",
+            date: endTime
+        )
     }
 
     // MARK: - Schedule Single Notification
